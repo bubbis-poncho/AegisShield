@@ -1,0 +1,245 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: vault-config
+  namespace: aegisshield
+data:
+  vault.hcl: |
+    # HashiCorp Vault Configuration for AegisShield
+    # Constitutional Principle: Data Integrity & Security
+    
+    ui = true
+    
+    listener "tcp" {
+      address         = "0.0.0.0:8200"
+      cluster_address = "0.0.0.0:8201"
+      tls_disable     = true  # Enable TLS in production
+    }
+    
+    storage "postgresql" {
+      connection_url = "postgres://vault_user:VAULT_PASSWORD@postgresql:5432/vault?sslmode=disable"
+      table          = "vault_kv_store"
+      max_parallel   = 128
+    }
+    
+    cluster_addr = "https://vault-${HOSTNAME##*-}.vault.aegisshield.svc.cluster.local:8201"
+    api_addr     = "https://vault-${HOSTNAME##*-}.vault.aegisshield.svc.cluster.local:8200"
+    
+    # High Availability
+    ha_storage "postgresql" {
+      connection_url   = "postgres://vault_user:VAULT_PASSWORD@postgresql:5432/vault?sslmode=disable"
+      table            = "vault_ha_locks"
+      max_parallel     = 128
+    }
+    
+    # Telemetry for monitoring
+    telemetry {
+      prometheus_retention_time = "30s"
+      disable_hostname          = true
+    }
+    
+    # Security headers
+    raw_storage_endpoint = false
+    disable_mlock       = true  # Required in containerized environments
+    
+    # Seal configuration (use auto-unseal in production)
+    seal "shamir" {
+      threshold = 3
+      shares    = 5
+    }
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: vault-secret
+  namespace: aegisshield
+type: Opaque
+stringData:
+  VAULT_DB_PASSWORD: "CHANGE_ME_IN_PRODUCTION"
+  VAULT_ROOT_TOKEN: ""  # Generated during initialization
+  VAULT_UNSEAL_KEYS: ""  # Generated during initialization
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: vault
+  namespace: aegisshield
+  labels:
+    app: vault
+    component: security
+spec:
+  serviceName: vault
+  replicas: 3  # HA setup
+  selector:
+    matchLabels:
+      app: vault
+  template:
+    metadata:
+      labels:
+        app: vault
+        component: security
+    spec:
+      serviceAccountName: aegisshield-admin
+      containers:
+      - name: vault
+        image: hashicorp/vault:1.15.0
+        ports:
+        - containerPort: 8200
+          name: api
+        - containerPort: 8201
+          name: cluster
+        env:
+        - name: VAULT_ADDR
+          value: "http://127.0.0.1:8200"
+        - name: VAULT_API_ADDR
+          value: "http://$(POD_IP):8200"
+        - name: VAULT_CLUSTER_ADDR
+          value: "http://$(POD_IP):8201"
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        - name: VAULT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: vault-secret
+              key: VAULT_DB_PASSWORD
+        command:
+        - "/bin/sh"
+        - "-ec"
+        args:
+        - |
+          # Create vault database user if not exists
+          export PGPASSWORD="$POSTGRES_PASSWORD"
+          psql -h postgresql -U postgres -d aegisshield -c "
+            CREATE USER vault_user WITH PASSWORD '$VAULT_PASSWORD';
+            GRANT ALL PRIVILEGES ON DATABASE vault TO vault_user;
+            CREATE DATABASE IF NOT EXISTS vault;
+          " || true
+          
+          # Start Vault server
+          vault server -config=/vault/config/vault.hcl
+        volumeMounts:
+        - name: vault-config
+          mountPath: /vault/config
+        - name: vault-data
+          mountPath: /vault/data
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /v1/sys/health
+            port: 8200
+            scheme: HTTP
+          initialDelaySeconds: 60
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /v1/sys/health
+            port: 8200
+            scheme: HTTP
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        securityContext:
+          capabilities:
+            add: ["IPC_LOCK"]
+      volumes:
+      - name: vault-config
+        configMap:
+          name: vault-config
+  volumeClaimTemplates:
+  - metadata:
+      name: vault-data
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      resources:
+        requests:
+          storage: 10Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vault
+  namespace: aegisshield
+  labels:
+    app: vault
+    component: security
+spec:
+  ports:
+  - port: 8200
+    targetPort: 8200
+    name: api
+  - port: 8201
+    targetPort: 8201
+    name: cluster
+  selector:
+    app: vault
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vault-cluster
+  namespace: aegisshield
+  labels:
+    app: vault
+    component: security
+spec:
+  ports:
+  - port: 8201
+    targetPort: 8201
+    name: cluster
+  selector:
+    app: vault
+  clusterIP: None
+---
+# Vault initialization job
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: vault-init
+  namespace: aegisshield
+  labels:
+    app: vault-init
+    component: security
+spec:
+  template:
+    spec:
+      serviceAccountName: aegisshield-admin
+      restartPolicy: OnFailure
+      containers:
+      - name: vault-init
+        image: hashicorp/vault:1.15.0
+        env:
+        - name: VAULT_ADDR
+          value: "http://vault:8200"
+        command:
+        - "/bin/sh"
+        - "-ec"
+        args:
+        - |
+          # Wait for Vault to be ready
+          until vault status 2>/dev/null; do
+            echo "Waiting for Vault to start..."
+            sleep 5
+          done
+          
+          # Initialize Vault if not already initialized
+          if ! vault status | grep -q "Initialized.*true"; then
+            echo "Initializing Vault..."
+            vault operator init -key-shares=5 -key-threshold=3 > /tmp/init-output.txt
+            
+            # Store initialization output in secret (in production, use external secret management)
+            kubectl create secret generic vault-init-keys \
+              --from-file=init-output=/tmp/init-output.txt \
+              -n aegisshield || true
+              
+            echo "Vault initialized. Unseal keys stored in vault-init-keys secret."
+          else
+            echo "Vault already initialized."
+          fi

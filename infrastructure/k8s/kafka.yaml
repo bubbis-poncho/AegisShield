@@ -1,0 +1,287 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kafka-config
+  namespace: aegisshield
+data:
+  server.properties: |
+    # Apache Kafka Configuration for AegisShield
+    # Constitutional Principle: Scalability & Data Integrity
+    
+    # Broker Configuration
+    broker.id=-1  # Auto-generated in StatefulSet
+    listeners=PLAINTEXT://0.0.0.0:9092
+    advertised.listeners=PLAINTEXT://kafka-${HOSTNAME##*-}.kafka.aegisshield.svc.cluster.local:9092
+    
+    # Cluster Configuration
+    num.network.threads=8
+    num.io.threads=16
+    socket.send.buffer.bytes=102400
+    socket.receive.buffer.bytes=102400
+    socket.request.max.bytes=104857600
+    
+    # Log Configuration for Data Integrity
+    log.retention.hours=168  # 7 days retention
+    log.retention.bytes=1073741824  # 1GB per partition
+    log.segment.bytes=1073741824
+    log.retention.check.interval.ms=300000
+    
+    # Replication for High Availability
+    default.replication.factor=3
+    min.insync.replicas=2
+    unclean.leader.election.enable=false
+    
+    # Performance Tuning
+    num.partitions=6
+    num.recovery.threads.per.data.dir=1
+    offsets.topic.replication.factor=3
+    transaction.state.log.replication.factor=3
+    transaction.state.log.min.isr=2
+    
+    # Compression for efficiency
+    compression.type=snappy
+    
+    # Security
+    security.inter.broker.protocol=PLAINTEXT  # Use SSL in production
+    
+    # ZooKeeper Connection
+    zookeeper.connect=zookeeper:2181
+    zookeeper.connection.timeout.ms=18000
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: zookeeper-config
+  namespace: aegisshield
+data:
+  zoo.cfg: |
+    # ZooKeeper Configuration for Kafka
+    tickTime=2000
+    dataDir=/data
+    dataLogDir=/logs
+    clientPort=2181
+    maxClientCnxns=60
+    autopurge.snapRetainCount=3
+    autopurge.purgeInterval=1
+    
+    # Cluster Configuration (3 nodes for HA)
+    initLimit=10
+    syncLimit=5
+    server.1=zookeeper-0.zookeeper.aegisshield.svc.cluster.local:2888:3888
+    server.2=zookeeper-1.zookeeper.aegisshield.svc.cluster.local:2888:3888
+    server.3=zookeeper-2.zookeeper.aegisshield.svc.cluster.local:2888:3888
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: zookeeper
+  namespace: aegisshield
+  labels:
+    app: zookeeper
+    component: messaging
+spec:
+  serviceName: zookeeper
+  replicas: 3
+  selector:
+    matchLabels:
+      app: zookeeper
+  template:
+    metadata:
+      labels:
+        app: zookeeper
+        component: messaging
+    spec:
+      serviceAccountName: aegisshield-admin
+      containers:
+      - name: zookeeper
+        image: confluentinc/cp-zookeeper:7.4.0
+        ports:
+        - containerPort: 2181
+          name: client
+        - containerPort: 2888
+          name: server
+        - containerPort: 3888
+          name: election
+        env:
+        - name: ZOOKEEPER_CLIENT_PORT
+          value: "2181"
+        - name: ZOOKEEPER_TICK_TIME
+          value: "2000"
+        - name: ZOOKEEPER_SERVER_ID
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.annotations['statefulset.kubernetes.io/pod-name']
+        volumeMounts:
+        - name: zookeeper-data
+          mountPath: /data
+        - name: zookeeper-logs
+          mountPath: /logs
+        - name: zookeeper-config
+          mountPath: /etc/kafka/zoo.cfg
+          subPath: zoo.cfg
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        livenessProbe:
+          exec:
+            command:
+            - sh
+            - -c
+            - "echo ruok | nc localhost 2181 | grep imok"
+          initialDelaySeconds: 30
+          periodSeconds: 30
+        readinessProbe:
+          exec:
+            command:
+            - sh
+            - -c
+            - "echo ruok | nc localhost 2181 | grep imok"
+          initialDelaySeconds: 10
+          periodSeconds: 10
+      volumes:
+      - name: zookeeper-config
+        configMap:
+          name: zookeeper-config
+  volumeClaimTemplates:
+  - metadata:
+      name: zookeeper-data
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      resources:
+        requests:
+          storage: 10Gi
+  - metadata:
+      name: zookeeper-logs
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      resources:
+        requests:
+          storage: 5Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: zookeeper
+  namespace: aegisshield
+  labels:
+    app: zookeeper
+    component: messaging
+spec:
+  ports:
+  - port: 2181
+    targetPort: 2181
+    name: client
+  - port: 2888
+    targetPort: 2888
+    name: server
+  - port: 3888
+    targetPort: 3888
+    name: election
+  selector:
+    app: zookeeper
+  clusterIP: None
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: kafka
+  namespace: aegisshield
+  labels:
+    app: kafka
+    component: messaging
+spec:
+  serviceName: kafka
+  replicas: 3
+  selector:
+    matchLabels:
+      app: kafka
+  template:
+    metadata:
+      labels:
+        app: kafka
+        component: messaging
+    spec:
+      serviceAccountName: aegisshield-admin
+      containers:
+      - name: kafka
+        image: confluentinc/cp-kafka:7.4.0
+        ports:
+        - containerPort: 9092
+          name: kafka
+        env:
+        - name: KAFKA_BROKER_ID
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.annotations['statefulset.kubernetes.io/pod-name']
+        - name: KAFKA_ZOOKEEPER_CONNECT
+          value: "zookeeper:2181"
+        - name: KAFKA_ADVERTISED_LISTENERS
+          value: "PLAINTEXT://$(hostname -f):9092"
+        - name: KAFKA_LISTENERS
+          value: "PLAINTEXT://0.0.0.0:9092"
+        - name: KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR
+          value: "3"
+        - name: KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR
+          value: "3"
+        - name: KAFKA_TRANSACTION_STATE_LOG_MIN_ISR
+          value: "2"
+        - name: KAFKA_DEFAULT_REPLICATION_FACTOR
+          value: "3"
+        - name: KAFKA_MIN_INSYNC_REPLICAS
+          value: "2"
+        volumeMounts:
+        - name: kafka-data
+          mountPath: /var/lib/kafka/data
+        - name: kafka-config
+          mountPath: /etc/kafka/server.properties
+          subPath: server.properties
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "1"
+        livenessProbe:
+          tcpSocket:
+            port: 9092
+          initialDelaySeconds: 30
+          periodSeconds: 30
+        readinessProbe:
+          tcpSocket:
+            port: 9092
+          initialDelaySeconds: 10
+          periodSeconds: 10
+      volumes:
+      - name: kafka-config
+        configMap:
+          name: kafka-config
+  volumeClaimTemplates:
+  - metadata:
+      name: kafka-data
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      resources:
+        requests:
+          storage: 50Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kafka
+  namespace: aegisshield
+  labels:
+    app: kafka
+    component: messaging
+spec:
+  ports:
+  - port: 9092
+    targetPort: 9092
+    name: kafka
+  selector:
+    app: kafka
+  clusterIP: None

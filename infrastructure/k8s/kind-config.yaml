@@ -1,0 +1,64 @@
+# Kind cluster configuration for AegisShield development
+# Constitutional Principle: Modular Code & Comprehensive Testing
+
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: aegisshield-dev
+
+# Multi-node setup for realistic testing
+nodes:
+- role: control-plane
+  kubeadmConfigPatches:
+  - |
+    kind: InitConfiguration
+    nodeRegistration:
+      kubeletExtraArgs:
+        node-labels: "ingress-ready=true"
+  extraPortMappings:
+  # Expose ingress controller ports
+  - containerPort: 80
+    hostPort: 80
+    protocol: TCP
+  - containerPort: 443
+    hostPort: 443
+    protocol: TCP
+  # Expose common service ports for development
+  - containerPort: 30000
+    hostPort: 5432
+    protocol: TCP  # PostgreSQL
+  - containerPort: 30001
+    hostPort: 7474
+    protocol: TCP  # Neo4j HTTP
+  - containerPort: 30002
+    hostPort: 7687
+    protocol: TCP  # Neo4j Bolt
+  - containerPort: 30003
+    hostPort: 9092
+    protocol: TCP  # Kafka
+  - containerPort: 30004
+    hostPort: 8200
+    protocol: TCP  # Vault
+  - containerPort: 30005
+    hostPort: 9090
+    protocol: TCP  # Prometheus
+  - containerPort: 30006
+    hostPort: 3000
+    protocol: TCP  # Grafana
+  
+# Worker nodes for distributed workload testing
+- role: worker
+- role: worker
+
+# Networking configuration
+networking:
+  # Disable default CNI for Istio service mesh installation
+  disableDefaultCNI: false
+  podSubnet: "10.244.0.0/16"
+  serviceSubnet: "10.96.0.0/16"
+
+# Feature gates for advanced Kubernetes features
+featureGates:
+  # Enable topology aware hints for better pod distribution
+  TopologyAwareHints: true
+  # Enable graceful node shutdown for better reliability
+  GracefulNodeShutdown: true

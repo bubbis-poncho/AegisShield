@@ -1,50 +1,77 @@
-# [PROJECT_NAME] Constitution
-<!-- Example: Spec Constitution, TaskFlow Constitution, etc. -->
+<!--
+Sync Impact Report:
+- Version change: Template → 1.0.0 (Initial constitution establishment)
+- Modified principles: All 5 principles newly defined
+- Added sections: Core Principles (5), Development Standards, Governance
+- Removed sections: None (initial establishment)
+- Templates requiring updates: 
+  ✅ constitution.md (this file)
+  ✅ plan-template.md (Constitution Check section updated, version reference updated)
+  ✅ spec-template.md (already aligned with testable requirements)
+  ✅ tasks-template.md (already enforces TDD and comprehensive testing)
+  ✅ Command files (constitution.md command already references templates properly)
+- Follow-up TODOs: None
+-->
+
+# AegisShield Constitution
 
 ## Core Principles
 
-### [PRINCIPLE_1_NAME]
-<!-- Example: I. Library-First -->
-[PRINCIPLE_1_DESCRIPTION]
-<!-- Example: Every feature starts as a standalone library; Libraries must be self-contained, independently testable, documented; Clear purpose required - no organizational-only libraries -->
+### I. Data Integrity is Paramount
+The system MUST ensure data is accurate, consistent, and trustworthy. All data ingestion, transformation, and resolution processes MUST be transactional, auditable, and have mechanisms for error handling and reconciliation. 
 
-### [PRINCIPLE_2_NAME]
-<!-- Example: II. CLI Interface -->
-[PRINCIPLE_2_DESCRIPTION]
-<!-- Example: Every library exposes functionality via CLI; Text in/out protocol: stdin/args → stdout, errors → stderr; Support JSON + human-readable formats -->
+**Rationale**: As a security and threat intelligence platform, data integrity forms the foundation of all analysis and decision-making. Compromised data integrity leads to false positives, missed threats, and eroded trust.
 
-### [PRINCIPLE_3_NAME]
-<!-- Example: III. Test-First (NON-NEGOTIABLE) -->
-[PRINCIPLE_3_DESCRIPTION]
-<!-- Example: TDD mandatory: Tests written → User approved → Tests fail → Then implement; Red-Green-Refactor cycle strictly enforced -->
+### II. Scalability and Performance
+The architecture MUST be designed to handle massive data volumes and high-velocity event streams in real-time. Services MUST be horizontally scalable, and queries MUST be optimized for low-latency responses, particularly for the interactive investigation UI.
 
-### [PRINCIPLE_4_NAME]
-<!-- Example: IV. Integration Testing -->
-[PRINCIPLE_4_DESCRIPTION]
-<!-- Example: Focus areas requiring integration tests: New library contract tests, Contract changes, Inter-service communication, Shared schemas -->
+**Rationale**: Security events occur at massive scale and require immediate response. System performance directly impacts threat detection effectiveness and analyst productivity.
 
-### [PRINCIPLE_5_NAME]
-<!-- Example: V. Observability, VI. Versioning & Breaking Changes, VII. Simplicity -->
-[PRINCIPLE_5_DESCRIPTION]
-<!-- Example: Text I/O ensures debuggability; Structured logging required; Or: MAJOR.MINOR.BUILD format; Or: Start simple, YAGNI principles -->
+### III. Modular and Maintainable Code
+Services MUST be loosely coupled and highly cohesive, communicating through well-defined APIs and message queues. Code MUST be clean, well-documented, and follow established design patterns to ensure long-term maintainability.
 
-## [SECTION_2_NAME]
-<!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->
+**Rationale**: Security platforms evolve rapidly with emerging threats. Modular architecture enables quick adaptation, reduces deployment risks, and facilitates team collaboration.
 
-[SECTION_2_CONTENT]
-<!-- Example: Technology stack requirements, compliance standards, deployment policies, etc. -->
+### IV. Comprehensive Testing (NON-NEGOTIABLE)
+Every service MUST have a robust testing suite, including unit tests, integration tests, and end-to-end tests. A continuous integration (CI) pipeline MUST automatically run tests to ensure code quality and prevent regressions.
 
-## [SECTION_3_NAME]
-<!-- Example: Development Workflow, Review Process, Quality Gates, etc. -->
+**Rationale**: Security platforms cannot afford failures or unexpected behavior. Comprehensive testing is essential for system reliability and confidence in threat detection capabilities.
 
-[SECTION_3_CONTENT]
-<!-- Example: Code review requirements, testing gates, deployment approval process, etc. -->
+### V. Consistent and Intuitive User Experience
+The front-end MUST provide a consistent, responsive, and intuitive interface for analysts. Complex data MUST be visualized clearly, and workflows for investigation MUST be efficient and user-centric.
+
+**Rationale**: Analyst effectiveness directly impacts security posture. Poor UX leads to missed threats, slower response times, and analyst fatigue during critical incidents.
+
+## Development Standards
+
+### Code Quality Requirements
+- All code MUST pass automated linting and formatting checks
+- Code coverage MUST meet minimum thresholds established per component
+- Security scanning MUST be integrated into the CI/CD pipeline
+- Database migrations MUST be reversible and tested
+
+### API Design Standards
+- All APIs MUST follow RESTful principles with OpenAPI specifications
+- Event schemas MUST be versioned and backward-compatible
+- Rate limiting and authentication MUST be implemented consistently
+- Error responses MUST include actionable information for debugging
+
+### Performance Requirements
+- API responses MUST complete within 200ms for interactive queries
+- Batch processing MUST handle minimum 10,000 events per second
+- System MUST maintain <1% data loss during peak loads
+- UI interactions MUST respond within 100ms for user actions
 
 ## Governance
-<!-- Example: Constitution supersedes all other practices; Amendments require documentation, approval, migration plan -->
 
-[GOVERNANCE_RULES]
-<!-- Example: All PRs/reviews must verify compliance; Complexity must be justified; Use [GUIDANCE_FILE] for runtime development guidance -->
+This constitution supersedes all other development practices and standards. All code reviews, architectural decisions, and feature implementations MUST verify compliance with these principles.
 
-**Version**: [CONSTITUTION_VERSION] | **Ratified**: [RATIFICATION_DATE] | **Last Amended**: [LAST_AMENDED_DATE]
-<!-- Example: Version: 2.1.1 | Ratified: 2025-06-13 | Last Amended: 2025-07-16 -->
+Amendments to this constitution require:
+1. Documentation of the proposed change and rationale
+2. Assessment of impact on existing systems and workflows  
+3. Approval from the technical leadership team
+4. Migration plan for affected components
+
+Complexity that violates these principles MUST be justified with specific technical requirements and approved exceptions. Teams MUST use established patterns and libraries that align with these principles.
+
+**Version**: 1.0.0 | **Ratified**: 2025-09-20 | **Last Amended**: 2025-09-20

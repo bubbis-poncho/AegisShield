@@ -1,0 +1,527 @@
+openapi: 3.0.3
+info:
+  title: Data Intelligence Platform API
+  description: API Gateway for the financial crimes investigation platform
+  version: 1.0.0
+  contact:
+    name: AegisShield Platform Team
+
+servers:
+  - url: https://api.aegisshield.platform
+    description: Production API Gateway
+  - url: https://staging-api.aegisshield.platform
+    description: Staging API Gateway
+
+security:
+  - bearerAuth: []
+
+paths:
+  /api/v1/investigations:
+    get:
+      summary: List investigations for current analyst
+      tags: [Investigations]
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [Open, InProgress, Closed, Archived]
+        - name: priority
+          in: query
+          schema:
+            type: string
+            enum: [Low, Medium, High, Urgent]
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+            maximum: 100
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: List of investigations
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  investigations:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Investigation'
+                  total:
+                    type: integer
+                  limit:
+                    type: integer
+                  offset:
+                    type: integer
+
+    post:
+      summary: Create new investigation
+      tags: [Investigations]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, description, priority]
+              properties:
+                title:
+                  type: string
+                  maxLength: 200
+                description:
+                  type: string
+                  maxLength: 2000
+                priority:
+                  type: string
+                  enum: [Low, Medium, High, Urgent]
+                entities_of_interest:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+      responses:
+        '201':
+          description: Investigation created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Investigation'
+
+  /api/v1/investigations/{investigationId}:
+    get:
+      summary: Get investigation details
+      tags: [Investigations]
+      parameters:
+        - name: investigationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Investigation details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Investigation'
+        '404':
+          description: Investigation not found
+
+  /api/v1/alerts:
+    get:
+      summary: List alerts for current analyst
+      tags: [Alerts]
+      parameters:
+        - name: severity
+          in: query
+          schema:
+            type: string
+            enum: [Low, Medium, High, Critical]
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [New, InProgress, Resolved, False_Positive]
+        - name: alert_type
+          in: query
+          schema:
+            type: string
+            enum: [ML, Sanctions, Velocity, Structuring, Unusual]
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+            maximum: 200
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: List of alerts
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  alerts:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Alert'
+                  total:
+                    type: integer
+
+  /api/v1/alerts/{alertId}/investigate:
+    post:
+      summary: Start investigation from alert
+      tags: [Alerts]
+      parameters:
+        - name: alertId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                investigation_title:
+                  type: string
+                  maxLength: 200
+                investigation_notes:
+                  type: string
+                  maxLength: 2000
+      responses:
+        '201':
+          description: Investigation created from alert
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Investigation'
+
+  /api/v1/graph/explore:
+    post:
+      summary: Explore entity graph for investigation
+      tags: [Graph]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [entity_id]
+              properties:
+                entity_id:
+                  type: string
+                  format: uuid
+                  description: Starting entity for exploration
+                depth:
+                  type: integer
+                  default: 2
+                  minimum: 1
+                  maximum: 4
+                  description: Maximum relationship depth
+                relationship_types:
+                  type: array
+                  items:
+                    type: string
+                    enum: [Controls, Owns, EmployedBy, Related, Transacts, Guarantees]
+                  description: Filter by relationship types
+                min_strength:
+                  type: number
+                  format: float
+                  minimum: 0.0
+                  maximum: 1.0
+                  default: 0.1
+                  description: Minimum relationship strength
+      responses:
+        '200':
+          description: Graph exploration results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  nodes:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/GraphNode'
+                  edges:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/GraphEdge'
+                  layout_hints:
+                    type: object
+                    properties:
+                      suggested_layout:
+                        type: string
+                        enum: [force-directed, hierarchical, circular]
+                      cluster_groups:
+                        type: array
+                        items:
+                          type: object
+
+  /api/v1/entities/{entityId}/transactions:
+    get:
+      summary: Get transactions for an entity
+      tags: [Entities]
+      parameters:
+        - name: entityId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: start_date
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: end_date
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: min_amount
+          in: query
+          schema:
+            type: number
+            format: decimal
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 100
+            maximum: 1000
+      responses:
+        '200':
+          description: Entity transactions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  transactions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Transaction'
+                  total:
+                    type: integer
+                  aggregations:
+                    type: object
+                    properties:
+                      total_amount:
+                        type: number
+                        format: decimal
+                      transaction_count:
+                        type: integer
+                      unique_counterparties:
+                        type: integer
+
+  /api/v1/search:
+    get:
+      summary: Search entities across the platform
+      tags: [Search]
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 3
+          description: Search query
+        - name: entity_types
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+              enum: [Person, Organization, Account, Transaction]
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+            maximum: 100
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/SearchResult'
+                  total:
+                    type: integer
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Investigation:
+      type: object
+      properties:
+        investigation_id:
+          type: string
+          format: uuid
+        case_number:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        priority:
+          type: string
+          enum: [Low, Medium, High, Urgent]
+        status:
+          type: string
+          enum: [Open, InProgress, Closed, Archived]
+        created_by:
+          type: string
+          format: uuid
+        assigned_to:
+          type: string
+          format: uuid
+        alerts:
+          type: array
+          items:
+            type: string
+            format: uuid
+        entities_of_interest:
+          type: array
+          items:
+            type: string
+            format: uuid
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    Alert:
+      type: object
+      properties:
+        alert_id:
+          type: string
+          format: uuid
+        alert_type:
+          type: string
+          enum: [ML, Sanctions, Velocity, Structuring, Unusual]
+        severity:
+          type: string
+          enum: [Low, Medium, High, Critical]
+        confidence_score:
+          type: number
+          format: float
+        title:
+          type: string
+        description:
+          type: string
+        entities_involved:
+          type: array
+          items:
+            type: string
+            format: uuid
+        investigation_status:
+          type: string
+          enum: [New, InProgress, Resolved, False_Positive]
+        detection_time:
+          type: string
+          format: date-time
+
+    GraphNode:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum: [Person, Organization, Account]
+        label:
+          type: string
+        risk_score:
+          type: number
+          format: float
+        metadata:
+          type: object
+        position:
+          type: object
+          properties:
+            x:
+              type: number
+            y:
+              type: number
+
+    GraphEdge:
+      type: object
+      properties:
+        id:
+          type: string
+        source:
+          type: string
+          format: uuid
+        target:
+          type: string
+          format: uuid
+        relationship_type:
+          type: string
+        strength:
+          type: number
+          format: float
+        confidence:
+          type: number
+          format: float
+
+    Transaction:
+      type: object
+      properties:
+        transaction_id:
+          type: string
+          format: uuid
+        source_account_id:
+          type: string
+          format: uuid
+        destination_account_id:
+          type: string
+          format: uuid
+        amount:
+          type: number
+          format: decimal
+        currency:
+          type: string
+        transaction_type:
+          type: string
+        transaction_date:
+          type: string
+          format: date-time
+        description:
+          type: string
+        status:
+          type: string
+        risk_flags:
+          type: array
+          items:
+            type: string
+
+    SearchResult:
+      type: object
+      properties:
+        entity_id:
+          type: string
+          format: uuid
+        entity_type:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        risk_score:
+          type: number
+          format: float
+        relevance_score:
+          type: number
+          format: float

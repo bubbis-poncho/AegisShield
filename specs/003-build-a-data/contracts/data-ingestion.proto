@@ -1,0 +1,168 @@
+// Data Ingestion Service gRPC Contract
+// Purpose: Handle real-time data ingestion from multiple sources
+
+syntax = "proto3";
+
+package aegisshield.data_ingestion.v1;
+
+option go_package = "github.com/aegisshield/platform/proto/data_ingestion/v1";
+
+// Service for ingesting data from external sources
+service DataIngestionService {
+  // Ingest transaction data from financial institutions
+  rpc IngestTransactions(IngestTransactionsRequest) returns (IngestTransactionsResponse);
+  
+  // Ingest customer data from CRM systems
+  rpc IngestCustomerData(IngestCustomerDataRequest) returns (IngestCustomerDataResponse);
+  
+  // Ingest sanction list updates (PEP, OFAC, etc.)
+  rpc IngestSanctionLists(IngestSanctionListsRequest) returns (IngestSanctionListsResponse);
+  
+  // Get ingestion status and health metrics
+  rpc GetIngestionStatus(GetIngestionStatusRequest) returns (GetIngestionStatusResponse);
+  
+  // Configure data source connections
+  rpc ConfigureDataSource(ConfigureDataSourceRequest) returns (ConfigureDataSourceResponse);
+}
+
+// Transaction ingestion request
+message IngestTransactionsRequest {
+  string data_source_id = 1;
+  repeated TransactionRecord transactions = 2;
+  string batch_id = 3;
+  int64 timestamp = 4;
+}
+
+message TransactionRecord {
+  string external_id = 1;
+  string source_account = 2;
+  string destination_account = 3;
+  string amount = 4; // Decimal as string to avoid precision loss
+  string currency = 5;
+  string transaction_type = 6;
+  int64 transaction_timestamp = 7;
+  string description = 8;
+  map<string, string> metadata = 9;
+}
+
+message IngestTransactionsResponse {
+  int32 accepted_count = 1;
+  int32 rejected_count = 2;
+  repeated ValidationError errors = 3;
+  string batch_id = 4;
+  int64 processing_time_ms = 5;
+}
+
+// Customer data ingestion
+message IngestCustomerDataRequest {
+  string data_source_id = 1;
+  repeated CustomerRecord customers = 2;
+  string batch_id = 3;
+}
+
+message CustomerRecord {
+  string external_id = 1;
+  string customer_type = 2; // INDIVIDUAL or ORGANIZATION
+  repeated string names = 3;
+  repeated string identification_numbers = 4;
+  repeated Address addresses = 5;
+  repeated string phone_numbers = 6;
+  repeated string email_addresses = 7;
+  map<string, string> metadata = 8;
+}
+
+message Address {
+  string street = 1;
+  string city = 2;
+  string state = 3;
+  string postal_code = 4;
+  string country = 5;
+  string address_type = 6; // RESIDENTIAL, BUSINESS, MAILING
+}
+
+message IngestCustomerDataResponse {
+  int32 accepted_count = 1;
+  int32 rejected_count = 2;
+  repeated ValidationError errors = 3;
+  string batch_id = 4;
+}
+
+// Sanction list ingestion
+message IngestSanctionListsRequest {
+  string list_type = 1; // PEP, OFAC, EU_SANCTIONS, etc.
+  repeated SanctionRecord records = 2;
+  string effective_date = 3;
+  bool is_full_refresh = 4;
+}
+
+message SanctionRecord {
+  string external_id = 1;
+  repeated string names = 2;
+  repeated string aliases = 3;
+  string record_type = 4; // INDIVIDUAL, ENTITY, VESSEL
+  string risk_level = 5;
+  repeated string countries = 6;
+  string program = 7;
+  map<string, string> metadata = 8;
+}
+
+message IngestSanctionListsResponse {
+  int32 accepted_count = 1;
+  int32 rejected_count = 2;
+  repeated ValidationError errors = 3;
+  string list_version = 4;
+}
+
+// Status and monitoring
+message GetIngestionStatusRequest {
+  string data_source_id = 1; // Optional filter
+  int64 since_timestamp = 2; // Optional time filter
+}
+
+message GetIngestionStatusResponse {
+  repeated DataSourceStatus sources = 1;
+  IngestionMetrics overall_metrics = 2;
+}
+
+message DataSourceStatus {
+  string data_source_id = 1;
+  string name = 2;
+  string status = 3; // ACTIVE, INACTIVE, ERROR
+  int64 last_ingestion_timestamp = 4;
+  int64 total_records_ingested = 5;
+  int32 error_count_last_hour = 6;
+  string last_error = 7;
+}
+
+message IngestionMetrics {
+  int64 total_records_per_hour = 1;
+  int64 total_errors_per_hour = 2;
+  double average_processing_time_ms = 3;
+  int32 active_source_count = 4;
+}
+
+// Data source configuration
+message ConfigureDataSourceRequest {
+  string data_source_id = 1;
+  string name = 2;
+  string source_type = 3; // API, SFTP, DATABASE, KAFKA
+  map<string, string> connection_params = 4;
+  string data_format = 5; // JSON, CSV, XML, AVRO
+  map<string, string> field_mappings = 6;
+  bool is_active = 7;
+}
+
+message ConfigureDataSourceResponse {
+  string data_source_id = 1;
+  bool success = 2;
+  repeated ValidationError validation_errors = 3;
+  string test_connection_result = 4;
+}
+
+// Common error structure
+message ValidationError {
+  string field = 1;
+  string error_code = 2;
+  string message = 3;
+  string rejected_value = 4;
+}

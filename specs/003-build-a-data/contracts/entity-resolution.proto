@@ -1,0 +1,227 @@
+// Entity Resolution Service gRPC Contract
+// Purpose: Match and merge entities across data sources
+
+syntax = "proto3";
+
+package aegisshield.entity_resolution.v1;
+
+option go_package = "github.com/aegisshield/platform/proto/entity_resolution/v1";
+
+// Service for entity resolution and deduplication
+service EntityResolutionService {
+  // Resolve entities for newly ingested data
+  rpc ResolveEntities(ResolveEntitiesRequest) returns (ResolveEntitiesResponse);
+  
+  // Get potential matches for manual review
+  rpc GetPotentialMatches(GetPotentialMatchesRequest) returns (GetPotentialMatchesResponse);
+  
+  // Confirm or reject entity matches
+  rpc ConfirmEntityMatch(ConfirmEntityMatchRequest) returns (ConfirmEntityMatchResponse);
+  
+  // Merge entities into a single resolved entity
+  rpc MergeEntities(MergeEntitiesRequest) returns (MergeEntitiesResponse);
+  
+  // Get entity resolution statistics
+  rpc GetResolutionStats(GetResolutionStatsRequest) returns (GetResolutionStatsResponse);
+  
+  // Train and update ML models
+  rpc UpdateResolutionModel(UpdateResolutionModelRequest) returns (UpdateResolutionModelResponse);
+}
+
+// Entity resolution request
+message ResolveEntitiesRequest {
+  repeated EntityCandidate candidates = 1;
+  string data_source_id = 2;
+  string batch_id = 3;
+  ResolutionOptions options = 4;
+}
+
+message EntityCandidate {
+  string external_id = 1;
+  string entity_type = 2; // PERSON, ORGANIZATION
+  repeated string names = 3;
+  repeated string identifiers = 4;
+  repeated AttributeValue attributes = 5;
+  double confidence_threshold = 6;
+}
+
+message AttributeValue {
+  string attribute_name = 1;
+  string value = 2;
+  double confidence = 3;
+  string source = 4;
+}
+
+message ResolutionOptions {
+  double match_threshold = 1; // Minimum similarity score for auto-match
+  double review_threshold = 2; // Minimum score to flag for manual review
+  bool auto_merge_high_confidence = 3;
+  repeated string required_attributes = 4;
+  bool use_ml_models = 5;
+}
+
+message ResolveEntitiesResponse {
+  repeated EntityResolution resolutions = 1;
+  int32 auto_matched_count = 2;
+  int32 manual_review_count = 3;
+  int32 new_entity_count = 4;
+  int64 processing_time_ms = 5;
+  string batch_id = 6;
+}
+
+message EntityResolution {
+  string external_id = 1;
+  string resolved_entity_id = 2; // UUID of canonical entity
+  string resolution_type = 3; // AUTO_MATCH, MANUAL_REVIEW, NEW_ENTITY
+  double match_confidence = 4;
+  repeated EntityMatch potential_matches = 5;
+  string resolution_reason = 6;
+}
+
+message EntityMatch {
+  string entity_id = 1;
+  double similarity_score = 2;
+  repeated MatchFeature match_features = 3;
+  string match_type = 4; // EXACT, FUZZY, PHONETIC, ML
+}
+
+message MatchFeature {
+  string feature_name = 1;
+  double similarity = 2;
+  string match_method = 3;
+  bool is_blocking_feature = 4;
+}
+
+// Manual review operations
+message GetPotentialMatchesRequest {
+  string entity_id = 1; // Optional filter
+  string reviewer_id = 2; // Analyst requesting review
+  int32 limit = 3;
+  int32 offset = 4;
+  string priority = 5; // HIGH, MEDIUM, LOW
+}
+
+message GetPotentialMatchesResponse {
+  repeated PotentialMatch matches = 1;
+  int32 total_count = 2;
+}
+
+message PotentialMatch {
+  string match_id = 1;
+  string source_entity_id = 2;
+  string target_entity_id = 3;
+  double similarity_score = 4;
+  repeated MatchFeature features = 5;
+  EntitySummary source_summary = 6;
+  EntitySummary target_summary = 7;
+  string created_at = 8;
+  string priority = 9;
+}
+
+message EntitySummary {
+  string entity_id = 1;
+  string entity_type = 2;
+  string primary_name = 3;
+  repeated string identifiers = 4;
+  int32 transaction_count = 5;
+  double risk_score = 6;
+  repeated string data_sources = 7;
+}
+
+message ConfirmEntityMatchRequest {
+  string match_id = 1;
+  string reviewer_id = 2;
+  bool is_match = 3;
+  string review_notes = 4;
+  bool apply_to_similar = 5; // Apply decision to similar pending matches
+}
+
+message ConfirmEntityMatchResponse {
+  bool success = 1;
+  string resolved_entity_id = 2; // If merged
+  int32 similar_matches_processed = 3;
+  repeated string error_messages = 4;
+}
+
+// Entity merging
+message MergeEntitiesRequest {
+  repeated string entity_ids = 1;
+  string primary_entity_id = 2; // Which entity to keep as primary
+  string merger_id = 3; // Analyst performing merge
+  string merge_reason = 4;
+  map<string, string> attribute_preferences = 5; // Which attributes to prefer
+}
+
+message MergeEntitiesResponse {
+  string merged_entity_id = 1;
+  bool success = 2;
+  repeated string merged_entity_ids = 3; // Entities that were merged away
+  int32 relationships_updated = 4;
+  int32 transactions_reassigned = 5;
+  repeated string warnings = 6;
+}
+
+// Statistics and monitoring
+message GetResolutionStatsRequest {
+  string time_period = 1; // HOUR, DAY, WEEK, MONTH
+  string data_source_id = 2; // Optional filter
+}
+
+message GetResolutionStatsResponse {
+  ResolutionStatistics stats = 1;
+  repeated DataSourceStats by_source = 2;
+  ModelPerformance model_performance = 3;
+}
+
+message ResolutionStatistics {
+  int64 total_entities_processed = 1;
+  int64 auto_matched_count = 2;
+  int64 manual_review_count = 3;
+  int64 new_entities_created = 4;
+  double average_confidence_score = 5;
+  double processing_rate_per_hour = 6;
+  int32 pending_manual_reviews = 7;
+}
+
+message DataSourceStats {
+  string data_source_id = 1;
+  string name = 2;
+  int64 entities_processed = 3;
+  double match_rate = 4;
+  double average_confidence = 5;
+}
+
+message ModelPerformance {
+  double precision = 1;
+  double recall = 2;
+  double f1_score = 3;
+  int64 training_examples = 4;
+  string last_training_date = 5;
+  double false_positive_rate = 6;
+  double false_negative_rate = 7;
+}
+
+// Model training and updates
+message UpdateResolutionModelRequest {
+  string model_type = 1; // SIMILARITY, BLOCKING, CLUSTERING
+  repeated TrainingExample training_data = 2;
+  map<string, string> hyperparameters = 3;
+  bool is_incremental_update = 4;
+}
+
+message TrainingExample {
+  EntityCandidate entity1 = 1;
+  EntityCandidate entity2 = 2;
+  bool is_match = 3;
+  double match_confidence = 4;
+  string reviewer_id = 5;
+  string review_timestamp = 6;
+}
+
+message UpdateResolutionModelResponse {
+  bool success = 1;
+  string model_version = 2;
+  ModelPerformance performance_metrics = 3;
+  int64 training_time_ms = 4;
+  repeated string validation_errors = 5;
+}

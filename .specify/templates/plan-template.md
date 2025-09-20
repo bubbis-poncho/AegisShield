@@ -47,7 +47,11 @@
 ## Constitution Check
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-[Gates determined based on constitution file]
+- [ ] **Data Integrity**: All data flows identified, error handling planned, audit trails designed
+- [ ] **Scalability & Performance**: Architecture handles expected load, horizontal scaling considered, latency targets defined
+- [ ] **Modular Code**: Services loosely coupled, APIs well-defined, clear separation of concerns
+- [ ] **Comprehensive Testing**: Test strategy covers unit/integration/e2e, CI pipeline planned, coverage targets set
+- [ ] **Consistent UX**: User workflows efficient, data visualization clear, interface patterns consistent
 
 ## Project Structure
 
@@ -208,4 +212,4 @@ ios/ or android/
 - [ ] Complexity deviations documented
 
 ---
-*Based on Constitution v2.1.1 - See `/memory/constitution.md`*
+*Based on Constitution v1.0.0 - See `.specify/memory/constitution.md`*

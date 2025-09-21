@@ -1,3 +1,6 @@
+//go:build integration
+// +build integration
+
 package integration
 
 import (
@@ -11,17 +14,17 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 
-	"github.com/analytics-dashboard/internal/config"
-	"github.com/analytics-dashboard/internal/dashboard"
-	"github.com/analytics-dashboard/internal/data"
-	"github.com/analytics-dashboard/internal/handlers"
-	"github.com/analytics-dashboard/internal/realtime"
-	"github.com/analytics-dashboard/internal/visualization"
+	"github.com/aegisshield/analytics-dashboard/internal/config"
+	"github.com/aegisshield/analytics-dashboard/internal/dashboard"
+	"github.com/aegisshield/analytics-dashboard/internal/data"
+	"github.com/aegisshield/analytics-dashboard/internal/handlers"
+	"github.com/aegisshield/analytics-dashboard/internal/realtime"
+	"github.com/aegisshield/analytics-dashboard/internal/visualization"
 )
 
 // TestSuite contains the test environment
@@ -46,7 +49,7 @@ func SetupTestSuite(t *testing.T) *TestSuite {
 
 	// Initialize test database and Redis connections
 	// (In a real test environment, you would set up actual test databases)
-	
+
 	gin.SetMode(gin.TestMode)
 
 	suite := &TestSuite{
@@ -64,7 +67,7 @@ func SetupTestSuite(t *testing.T) *TestSuite {
 func (s *TestSuite) setupServices() {
 	// Mock database and Redis for testing
 	// In production tests, use actual test instances
-	
+
 	dashboardManager := dashboard.NewManager(s.db, s.redis)
 	dataProcessor := data.NewProcessor(nil) // Mock cache
 	vizEngine := visualization.NewEngine(s.redis)
@@ -82,7 +85,7 @@ func (s *TestSuite) setupServices() {
 func (s *TestSuite) setupRouter() {
 	s.router = gin.New()
 	s.router.Use(gin.Recovery())
-	
+
 	// Add test middleware for authentication
 	s.router.Use(func(c *gin.Context) {
 		c.Set("user_id", "test_user_123")
@@ -542,13 +545,13 @@ func TestPerformance(t *testing.T) {
 
 	t.Run("Response Time Check", func(t *testing.T) {
 		start := time.Now()
-		
+
 		req := httptest.NewRequest("GET", "/api/v1/system/health", nil)
 		w := httptest.NewRecorder()
 		suite.router.ServeHTTP(w, req)
-		
+
 		duration := time.Since(start)
-		
+
 		assert.Equal(t, http.StatusOK, w.Code)
 		assert.Less(t, duration, 100*time.Millisecond, "Health check should respond quickly")
 	})

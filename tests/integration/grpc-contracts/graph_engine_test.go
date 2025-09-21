@@ -1,3 +1,6 @@
+//go:build integration
+// +build integration
+
 package grpc_contracts
 
 import (
@@ -10,7 +13,6 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-
 	// Import generated protobuf clients (will be generated in T019-T027)
 	// graphpb "aegisshield/shared/proto/graph-engine"
 )
@@ -21,18 +23,18 @@ import (
 func TestGraphEngineService_ExecuteQuery_ShouldFailInitially(t *testing.T) {
 	// This test MUST fail initially - we haven't implemented the service yet
 	// Following TDD: Red -> Green -> Refactor
-	
+
 	t.Skip("INTENTIONALLY FAILING: Graph Engine Service not implemented yet (T014)")
-	
+
 	// Arrange
 	conn, err := grpc.Dial("graph-engine:9004", grpc.WithInsecure())
 	require.NoError(t, err, "Should connect to graph engine service")
 	defer conn.Close()
-	
+
 	// client := graphpb.NewGraphEngineServiceClient(conn)
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	
+
 	// Act & Assert
 	t.Run("should execute Cypher query for transaction paths", func(t *testing.T) {
 		// Test path finding queries - FR-015 from spec
@@ -55,12 +57,12 @@ func TestGraphEngineService_ExecuteQuery_ShouldFailInitially(t *testing.T) {
 			QueryType: graphpb.QueryType_PATHFINDING,
 			Timeout:   "30s",
 		}
-		
+
 		// response, err := client.ExecuteQuery(ctx, request)
 		// assert.NoError(t, err, "Should execute Cypher query successfully")
 		// assert.NotEmpty(t, response.QueryId, "Should return query ID")
 		// assert.LessOrEqual(t, response.ExecutionTimeMs, int64(30000), "Should complete within timeout")
-		// 
+		//
 		// if len(response.Results) > 0 {
 		//     for _, result := range response.Results {
 		//         assert.NotEmpty(t, result.Path, "Should include path data")
@@ -69,7 +71,7 @@ func TestGraphEngineService_ExecuteQuery_ShouldFailInitially(t *testing.T) {
 		//     }
 		// }
 	})
-	
+
 	t.Run("should find suspicious transaction networks", func(t *testing.T) {
 		// Test network analysis - FR-016 from spec
 		request := &graphpb.NetworkAnalysisRequest{
@@ -78,7 +80,7 @@ func TestGraphEngineService_ExecuteQuery_ShouldFailInitially(t *testing.T) {
 			Parameters: &graphpb.AnalysisParameters{
 				MaxDepth:        3,
 				MinConnections:  5,
-				TimeWindow:     "30d",
+				TimeWindow:      "30d",
 				AmountThreshold: 50000.0,
 				RiskFactors: []graphpb.RiskFactor{
 					graphpb.RiskFactor_HIGH_RISK_GEOGRAPHY,
@@ -87,13 +89,13 @@ func TestGraphEngineService_ExecuteQuery_ShouldFailInitially(t *testing.T) {
 				},
 			},
 		}
-		
+
 		// response, err := client.AnalyzeNetwork(ctx, request)
 		// assert.NoError(t, err, "Should analyze network successfully")
 		// assert.NotEmpty(t, response.AnalysisId, "Should return analysis ID")
 		// assert.GreaterOrEqual(t, response.RiskScore, 0.0, "Should have valid risk score")
 		// assert.LessOrEqual(t, response.RiskScore, 1.0, "Should have valid risk score")
-		// 
+		//
 		// if response.SuspiciousPatterns > 0 {
 		//     assert.NotEmpty(t, response.DetectedPatterns, "Should include detected patterns")
 		//     for _, pattern := range response.DetectedPatterns {
@@ -103,15 +105,15 @@ func TestGraphEngineService_ExecuteQuery_ShouldFailInitially(t *testing.T) {
 		//     }
 		// }
 	})
-	
+
 	t.Run("should perform centrality analysis", func(t *testing.T) {
 		// Test centrality metrics - FR-017 from spec
 		request := &graphpb.CentralityAnalysisRequest{
 			Subgraph: &graphpb.SubgraphFilter{
-				EntityTypes:   []string{"Person", "Organization"},
-				TimeWindow:   "90d",
-				MinAmount:    1000.0,
-				Countries:    []string{"US", "GB", "CH", "LU"}, // High-risk countries
+				EntityTypes: []string{"Person", "Organization"},
+				TimeWindow:  "90d",
+				MinAmount:   1000.0,
+				Countries:   []string{"US", "GB", "CH", "LU"}, // High-risk countries
 			},
 			CentralityMetrics: []graphpb.CentralityMetric{
 				graphpb.CentralityMetric_BETWEENNESS,
@@ -121,12 +123,12 @@ func TestGraphEngineService_ExecuteQuery_ShouldFailInitially(t *testing.T) {
 			},
 			TopN: 50, // Top 50 most central entities
 		}
-		
+
 		// response, err := client.AnalyzeCentrality(ctx, request)
 		// assert.NoError(t, err, "Should analyze centrality successfully")
 		// assert.NotEmpty(t, response.AnalysisId, "Should return analysis ID")
 		// assert.LessOrEqual(t, len(response.CentralEntities), 50, "Should respect TopN limit")
-		// 
+		//
 		// for _, entity := range response.CentralEntities {
 		//     assert.NotEmpty(t, entity.EntityId, "Should include entity ID")
 		//     assert.GreaterOrEqual(t, entity.BetweennessCentrality, 0.0, "Should have valid betweenness score")
@@ -138,30 +140,30 @@ func TestGraphEngineService_ExecuteQuery_ShouldFailInitially(t *testing.T) {
 
 func TestGraphEngineService_StreamingQueries_ShouldFailInitially(t *testing.T) {
 	t.Skip("INTENTIONALLY FAILING: Graph Engine Service not implemented yet (T014)")
-	
+
 	conn, err := grpc.Dial("graph-engine:9004", grpc.WithInsecure())
 	require.NoError(t, err)
 	defer conn.Close()
-	
+
 	// client := graphpb.NewGraphEngineServiceClient(conn)
 	ctx := context.Background()
-	
+
 	t.Run("should handle streaming graph updates", func(t *testing.T) {
 		// Test real-time graph updates - scalability principle
 		// stream, err := client.StreamGraphUpdates(ctx)
 		// require.NoError(t, err, "Should establish streaming connection")
-		
+
 		// Send batch of graph updates
 		updates := []*graphpb.GraphUpdate{
 			{
 				UpdateType: graphpb.UpdateType_ADD_NODE,
 				NodeData: &graphpb.NodeData{
-					EntityId:   "entity-new-001",
-					Labels:     []string{"Person", "HighRisk"},
+					EntityId: "entity-new-001",
+					Labels:   []string{"Person", "HighRisk"},
 					Properties: map[string]string{
-						"name":        "Suspicious Entity",
-						"risk_score":  "0.85",
-						"created_at":  time.Now().Format(time.RFC3339),
+						"name":       "Suspicious Entity",
+						"risk_score": "0.85",
+						"created_at": time.Now().Format(time.RFC3339),
 					},
 				},
 			},
@@ -180,18 +182,18 @@ func TestGraphEngineService_StreamingQueries_ShouldFailInitially(t *testing.T) {
 				},
 			},
 		}
-		
+
 		// for _, update := range updates {
 		//     err := stream.Send(update)
 		//     assert.NoError(t, err, "Should send graph update successfully")
 		// }
-		
+
 		// response, err := stream.CloseAndRecv()
 		// assert.NoError(t, err, "Should complete streaming updates")
 		// assert.Equal(t, int32(len(updates)), response.UpdatesProcessed, "Should process all updates")
 		// assert.LessOrEqual(t, response.ProcessingTimeMs, int64(5000), "Should complete efficiently")
 	})
-	
+
 	t.Run("should stream query results for large datasets", func(t *testing.T) {
 		// Test streaming large result sets - performance principle
 		request := &graphpb.StreamQueryRequest{
@@ -204,10 +206,10 @@ func TestGraphEngineService_StreamingQueries_ShouldFailInitially(t *testing.T) {
 			BatchSize: 1000, // Stream 1000 results at a time
 			QueryType: graphpb.QueryType_LARGE_RESULT_SET,
 		}
-		
+
 		// stream, err := client.StreamQuery(ctx, request)
 		// require.NoError(t, err, "Should establish query stream")
-		
+
 		totalResults := 0
 		// for {
 		//     response, err := stream.Recv()
@@ -218,21 +220,21 @@ func TestGraphEngineService_StreamingQueries_ShouldFailInitially(t *testing.T) {
 		//     assert.LessOrEqual(t, len(response.Results), 1000, "Should respect batch size")
 		//     totalResults += len(response.Results)
 		// }
-		
+
 		// assert.GreaterOrEqual(t, totalResults, 0, "Should receive some results")
 	})
 }
 
 func TestGraphEngineService_GraphOptimization_ShouldFailInitially(t *testing.T) {
 	t.Skip("INTENTIONALLY FAILING: Graph Engine Service not implemented yet (T014)")
-	
+
 	conn, err := grpc.Dial("graph-engine:9004", grpc.WithInsecure())
 	require.NoError(t, err)
 	defer conn.Close()
-	
+
 	// client := graphpb.NewGraphEngineServiceClient(conn)
 	ctx := context.Background()
-	
+
 	t.Run("should optimize query performance", func(t *testing.T) {
 		// Test query optimization - performance principle
 		request := &graphpb.OptimizeQueryRequest{
@@ -247,13 +249,13 @@ func TestGraphEngineService_GraphOptimization_ShouldFailInitially(t *testing.T) 
 			OptimizationLevel: graphpb.OptimizationLevel_AGGRESSIVE,
 			TargetLatency:     "5s",
 		}
-		
+
 		// response, err := client.OptimizeQuery(ctx, request)
 		// assert.NoError(t, err, "Should optimize query successfully")
 		// assert.NotEmpty(t, response.OptimizedQuery, "Should return optimized query")
 		// assert.NotEmpty(t, response.ExecutionPlan, "Should include execution plan")
 		// assert.LessOrEqual(t, response.EstimatedLatencyMs, int64(5000), "Should meet target latency")
-		// 
+		//
 		// // Verify optimization suggestions
 		// if len(response.OptimizationSuggestions) > 0 {
 		//     for _, suggestion := range response.OptimizationSuggestions {
@@ -263,7 +265,7 @@ func TestGraphEngineService_GraphOptimization_ShouldFailInitially(t *testing.T) 
 		//     }
 		// }
 	})
-	
+
 	t.Run("should manage graph indexes", func(t *testing.T) {
 		// Test index management - performance principle
 		request := &graphpb.ManageIndexRequest{
@@ -275,13 +277,13 @@ func TestGraphEngineService_GraphOptimization_ShouldFailInitially(t *testing.T) 
 				IndexType:  graphpb.IndexType_BTREE,
 			},
 		}
-		
+
 		// response, err := client.ManageIndex(ctx, request)
 		// assert.NoError(t, err, "Should manage index successfully")
 		// assert.True(t, response.Success, "Should successfully create index")
 		// assert.NotEmpty(t, response.IndexName, "Should return index name")
 	})
-	
+
 	t.Run("should validate graph consistency", func(t *testing.T) {
 		// Test data integrity - constitutional principle
 		request := &graphpb.ValidateConsistencyRequest{
@@ -292,11 +294,11 @@ func TestGraphEngineService_GraphOptimization_ShouldFailInitially(t *testing.T) 
 			},
 			IncludeDetails: true,
 		}
-		
+
 		// response, err := client.ValidateConsistency(ctx, request)
 		// assert.NoError(t, err, "Should validate consistency successfully")
 		// assert.NotEmpty(t, response.ValidationId, "Should return validation ID")
-		// 
+		//
 		// if response.ViolationsFound > 0 {
 		//     assert.NotEmpty(t, response.Violations, "Should include violation details")
 		//     for _, violation := range response.Violations {

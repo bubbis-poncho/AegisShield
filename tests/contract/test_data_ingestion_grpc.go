@@ -1,3 +1,6 @@
+//go:build integration
+// +build integration
+
 package contract
 
 import (
@@ -38,9 +41,9 @@ func TestDataIngestionService_gRPC_Contract(t *testing.T) {
 			Timestamp:     time.Now().Unix(),
 			Description:   "Wire transfer payment",
 			Metadata: map[string]string{
-				"channel":     "online_banking",
-				"ip_address":  "192.168.1.100",
-				"user_agent":  "Mozilla/5.0",
+				"channel":    "online_banking",
+				"ip_address": "192.168.1.100",
+				"user_agent": "Mozilla/5.0",
 			},
 		}
 
@@ -95,7 +98,7 @@ func TestDataIngestionService_gRPC_Contract(t *testing.T) {
 				Timestamp:     time.Now().Unix(),
 			},
 			{
-				TransactionId: "batch_txn_002", 
+				TransactionId: "batch_txn_002",
 				Amount:        750.00,
 				Currency:      "EUR",
 				FromAccount:   "acc_003",

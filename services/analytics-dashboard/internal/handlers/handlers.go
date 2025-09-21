@@ -6,11 +6,11 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/aegisshield/analytics-dashboard/internal/dashboard"
+	"github.com/aegisshield/analytics-dashboard/internal/data"
+	"github.com/aegisshield/analytics-dashboard/internal/realtime"
+	"github.com/aegisshield/analytics-dashboard/internal/visualization"
 	"github.com/gin-gonic/gin"
-	"github.com/analytics-dashboard/internal/dashboard"
-	"github.com/analytics-dashboard/internal/data"
-	"github.com/analytics-dashboard/internal/realtime"
-	"github.com/analytics-dashboard/internal/visualization"
 )
 
 // Handler handles HTTP requests for the analytics dashboard
@@ -201,12 +201,12 @@ func (h *Handler) DeleteDashboard(c *gin.Context) {
 func (h *Handler) CloneDashboard(c *gin.Context) {
 	sourceID := c.Param("id")
 	userID := c.GetString("user_id")
-	
+
 	if sourceID == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Source dashboard ID required"})
 		return
 	}
-	
+
 	if userID == "" {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
@@ -385,21 +385,21 @@ func (h *Handler) ExecuteQuery(c *gin.Context) {
 func (h *Handler) GetDataSources(c *gin.Context) {
 	sources := []map[string]interface{}{
 		{
-			"id":   "postgres_main",
-			"name": "Main PostgreSQL Database",
-			"type": "postgresql",
+			"id":     "postgres_main",
+			"name":   "Main PostgreSQL Database",
+			"type":   "postgresql",
 			"status": "connected",
 		},
 		{
-			"id":   "neo4j_graph",
-			"name": "Neo4j Graph Database",
-			"type": "neo4j",
+			"id":     "neo4j_graph",
+			"name":   "Neo4j Graph Database",
+			"type":   "neo4j",
 			"status": "connected",
 		},
 		{
-			"id":   "prometheus_metrics",
-			"name": "Prometheus Metrics",
-			"type": "prometheus",
+			"id":     "prometheus_metrics",
+			"name":   "Prometheus Metrics",
+			"type":   "prometheus",
 			"status": "connected",
 		},
 	}
@@ -494,8 +494,8 @@ func (h *Handler) HandleWebSocket(c *gin.Context) {
 func (h *Handler) GetRealtimeStats(c *gin.Context) {
 	stats := gin.H{
 		"connected_clients": h.realtimeManager.GetHub().GetConnectedClients(),
-		"uptime":           time.Since(time.Now()).String(), // This would be actual uptime
-		"message_rate":     "1.2/sec",                       // This would be calculated
+		"uptime":            time.Since(time.Now()).String(), // This would be actual uptime
+		"message_rate":      "1.2/sec",                       // This would be calculated
 	}
 
 	c.JSON(http.StatusOK, stats)
@@ -510,10 +510,10 @@ func (h *Handler) HealthCheck(c *gin.Context) {
 		"timestamp": time.Now().UTC(),
 		"version":   "1.0.0",
 		"services": gin.H{
-			"database":    "connected",
-			"redis":       "connected",
-			"kafka":       "connected",
-			"websockets":  "active",
+			"database":   "connected",
+			"redis":      "connected",
+			"kafka":      "connected",
+			"websockets": "active",
 		},
 	}
 
@@ -523,13 +523,13 @@ func (h *Handler) HealthCheck(c *gin.Context) {
 // GetMetrics retrieves system metrics
 func (h *Handler) GetMetrics(c *gin.Context) {
 	metrics := gin.H{
-		"http_requests_total":     12345,
-		"websocket_connections":   h.realtimeManager.GetHub().GetConnectedClients(),
-		"database_queries_total":  6789,
-		"cache_hits_total":        4567,
-		"cache_misses_total":      1234,
-		"memory_usage_bytes":      67108864,
-		"cpu_usage_percent":       15.5,
+		"http_requests_total":    12345,
+		"websocket_connections":  h.realtimeManager.GetHub().GetConnectedClients(),
+		"database_queries_total": 6789,
+		"cache_hits_total":       4567,
+		"cache_misses_total":     1234,
+		"memory_usage_bytes":     67108864,
+		"cpu_usage_percent":      15.5,
 	}
 
 	c.JSON(http.StatusOK, metrics)
@@ -538,11 +538,11 @@ func (h *Handler) GetMetrics(c *gin.Context) {
 // GetVersion retrieves version information
 func (h *Handler) GetVersion(c *gin.Context) {
 	version := gin.H{
-		"version":     "1.0.0",
-		"build_date":  "2024-01-15T10:30:00Z",
-		"git_commit":  "abc123def456",
-		"go_version":  "go1.21.0",
-		"platform":    "linux/amd64",
+		"version":    "1.0.0",
+		"build_date": "2024-01-15T10:30:00Z",
+		"git_commit": "abc123def456",
+		"go_version": "go1.21.0",
+		"platform":   "linux/amd64",
 	}
 
 	c.JSON(http.StatusOK, version)

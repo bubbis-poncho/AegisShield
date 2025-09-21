@@ -1,3 +1,6 @@
+//go:build integration
+// +build integration
+
 package contract
 
 import (
@@ -23,11 +26,11 @@ func TestAPIGateway_GraphExploration_Endpoints(t *testing.T) {
 
 	t.Run("POST_Graph_Explore_ReturnsSubgraph", func(t *testing.T) {
 		exploreRequest := GraphExploreRequest{
-			CenterEntityID: "person_12345",
-			MaxDepth:       2,
-			MaxNodes:       100,
+			CenterEntityID:    "person_12345",
+			MaxDepth:          2,
+			MaxNodes:          100,
 			RelationshipTypes: []string{"FAMILY", "BUSINESS", "TRANSACTION"},
-			MinConfidence:  0.7,
+			MinConfidence:     0.7,
 		}
 
 		jsonData, err := json.Marshal(exploreRequest)
@@ -53,7 +56,7 @@ func TestAPIGateway_GraphExploration_Endpoints(t *testing.T) {
 	t.Run("GET_Graph_ShortestPath_ReturnsPath", func(t *testing.T) {
 		sourceID := "person_12345"
 		targetID := "org_67890"
-		
+
 		req, err := http.NewRequest("GET", baseURL+"/graph/path?source="+sourceID+"&target="+targetID+"&max_depth=5", nil)
 		require.NoError(t, err)
 		req.Header.Set("Authorization", authToken)
@@ -84,7 +87,7 @@ func TestAPIGateway_GraphExploration_Endpoints(t *testing.T) {
 						},
 					},
 					{
-						ID:   "o1", 
+						ID:   "o1",
 						Type: "ORGANIZATION",
 					},
 				},
@@ -131,7 +134,7 @@ func TestAPIGateway_GraphExploration_Endpoints(t *testing.T) {
 		err = json.NewDecoder(resp.Body).Decode(&centrality)
 		assert.NoError(t, err)
 		assert.True(t, len(centrality.Nodes) <= 20)
-		
+
 		// Check nodes are sorted by centrality score (descending)
 		for i := 1; i < len(centrality.Nodes); i++ {
 			assert.GreaterOrEqual(t, centrality.Nodes[i-1].Score, centrality.Nodes[i].Score)
@@ -163,7 +166,7 @@ func TestAPIGateway_GraphExploration_Endpoints(t *testing.T) {
 		assert.NoError(t, err)
 		assert.NotNil(t, communities.Communities)
 		assert.True(t, len(communities.Communities) <= 10)
-		
+
 		// Check each community has minimum size
 		for _, community := range communities.Communities {
 			assert.GreaterOrEqual(t, len(community.Members), 3)
@@ -253,9 +256,9 @@ type PatternMatchResponse struct {
 }
 
 type PatternMatch struct {
-	Score    float64               `json:"score"`
-	Bindings map[string]GraphNode  `json:"bindings"`
-	SubGraph GraphResponse         `json:"subgraph"`
+	Score    float64              `json:"score"`
+	Bindings map[string]GraphNode `json:"bindings"`
+	SubGraph GraphResponse        `json:"subgraph"`
 }
 
 type CentralityResponse struct {

@@ -1,3 +1,6 @@
+//go:build integration
+// +build integration
+
 package e2e
 
 import (
@@ -15,23 +18,23 @@ import (
 
 // E2ETestSuite contains end-to-end test environment
 type E2ETestSuite struct {
-	t               *testing.T
-	baseURL         string
+	t                   *testing.T
+	baseURL             string
 	dashboardServiceURL string
-	alertEngineURL     string
-	graphEngineURL     string
-	mlPipelineURL      string
+	alertEngineURL      string
+	graphEngineURL      string
+	mlPipelineURL       string
 }
 
 // SetupE2ETestSuite initializes the end-to-end test environment
 func SetupE2ETestSuite(t *testing.T) *E2ETestSuite {
 	return &E2ETestSuite{
-		t:               t,
-		baseURL:         "http://localhost:8080", // Analytics Dashboard
+		t:                   t,
+		baseURL:             "http://localhost:8080", // Analytics Dashboard
 		dashboardServiceURL: "http://localhost:8080",
-		alertEngineURL:     "http://localhost:8082",
-		graphEngineURL:     "http://localhost:8083",
-		mlPipelineURL:      "http://localhost:8084",
+		alertEngineURL:      "http://localhost:8082",
+		graphEngineURL:      "http://localhost:8083",
+		mlPipelineURL:       "http://localhost:8084",
 	}
 }
 
@@ -86,9 +89,9 @@ func TestCompleteDataFlow(t *testing.T) {
 func (s *E2ETestSuite) verifyServiceHealth(t *testing.T) {
 	services := map[string]string{
 		"Analytics Dashboard": s.dashboardServiceURL + "/api/v1/system/health",
-		"Alert Engine":       s.alertEngineURL + "/api/v1/health",
-		"Graph Engine":       s.graphEngineURL + "/api/v1/health",
-		"ML Pipeline":        s.mlPipelineURL + "/api/v1/health",
+		"Alert Engine":        s.alertEngineURL + "/api/v1/health",
+		"Graph Engine":        s.graphEngineURL + "/api/v1/health",
+		"ML Pipeline":         s.mlPipelineURL + "/api/v1/health",
 	}
 
 	for serviceName, healthURL := range services {
@@ -343,11 +346,11 @@ func (s *E2ETestSuite) triggerSuspiciousTransaction(t *testing.T) {
 	// This would typically call the data ingestion service
 	// For testing, we can call the alert engine directly
 	suspiciousTransaction := map[string]interface{}{
-		"amount":      100000,
-		"from_account": "suspicious_account_123",
-		"to_account":   "unknown_account_456",
+		"amount":           100000,
+		"from_account":     "suspicious_account_123",
+		"to_account":       "unknown_account_456",
 		"country_mismatch": true,
-		"unusual_time": true,
+		"unusual_time":     true,
 	}
 
 	// Post to alert engine (mock)
@@ -503,7 +506,7 @@ func TestWebSocketCommunication(t *testing.T) {
 
 		// Test heartbeat
 		time.Sleep(5 * time.Second)
-		
+
 		// Test unsubscription
 		unsubscribeMsg := map[string]interface{}{
 			"type":   "unsubscribe",

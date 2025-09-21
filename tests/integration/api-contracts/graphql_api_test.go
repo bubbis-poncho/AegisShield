@@ -1,3 +1,6 @@
+//go:build integration
+// +build integration
+
 package api_contracts
 
 import (
@@ -22,13 +25,13 @@ type GraphQLRequest struct {
 }
 
 type GraphQLResponse struct {
-	Data   interface{} `json:"data"`
+	Data   interface{}    `json:"data"`
 	Errors []GraphQLError `json:"errors,omitempty"`
 }
 
 type GraphQLError struct {
-	Message   string `json:"message"`
-	Path      []interface{} `json:"path,omitempty"`
+	Message   string            `json:"message"`
+	Path      []interface{}     `json:"path,omitempty"`
 	Locations []GraphQLLocation `json:"locations,omitempty"`
 }
 
@@ -40,13 +43,13 @@ type GraphQLLocation struct {
 func TestGraphQLAPI_EntityQueries_ShouldFailInitially(t *testing.T) {
 	// This test MUST fail initially - we haven't implemented the API gateway yet
 	// Following TDD: Red -> Green -> Refactor
-	
+
 	t.Skip("INTENTIONALLY FAILING: GraphQL API Gateway not implemented yet (T017)")
-	
+
 	// Setup test server (will be replaced with actual API gateway)
 	// server := setupTestGraphQLServer()
 	// defer server.Close()
-	
+
 	t.Run("should query entity by ID", func(t *testing.T) {
 		// Test basic entity retrieval - FR-018 from spec
 		query := `
@@ -66,17 +69,17 @@ func TestGraphQLAPI_EntityQueries_ShouldFailInitially(t *testing.T) {
 				}
 			}
 		`
-		
+
 		request := GraphQLRequest{
 			Query: query,
 			Variables: map[string]interface{}{
 				"entityId": "entity-123",
 			},
 		}
-		
+
 		// response := executeGraphQLQuery(t, server.URL, request)
 		// assert.Empty(t, response.Errors, "Should not have GraphQL errors")
-		// 
+		//
 		// entityData := response.Data.(map[string]interface{})["entity"].(map[string]interface{})
 		// assert.Equal(t, "entity-123", entityData["id"], "Should return correct entity ID")
 		// assert.NotEmpty(t, entityData["name"], "Should include entity name")
@@ -84,7 +87,7 @@ func TestGraphQLAPI_EntityQueries_ShouldFailInitially(t *testing.T) {
 		// assert.GreaterOrEqual(t, entityData["riskScore"].(float64), 0.0, "Should have valid risk score")
 		// assert.LessOrEqual(t, entityData["riskScore"].(float64), 1.0, "Should have valid risk score")
 	})
-	
+
 	t.Run("should search entities with filters", func(t *testing.T) {
 		// Test entity search - FR-019 from spec
 		query := `
@@ -103,7 +106,7 @@ func TestGraphQLAPI_EntityQueries_ShouldFailInitially(t *testing.T) {
 				}
 			}
 		`
-		
+
 		request := GraphQLRequest{
 			Query: query,
 			Variables: map[string]interface{}{
@@ -114,26 +117,26 @@ func TestGraphQLAPI_EntityQueries_ShouldFailInitially(t *testing.T) {
 						"max": 1.0,
 					},
 					"countries": []string{"CH", "RU", "CN"}, // High-risk countries
-					"flagged": true,
+					"flagged":   true,
 				},
 				"pagination": map[string]interface{}{
-					"page":     1,
-					"pageSize": 20,
-					"sortBy":   "riskScore",
+					"page":      1,
+					"pageSize":  20,
+					"sortBy":    "riskScore",
 					"sortOrder": "DESC",
 				},
 			},
 		}
-		
+
 		// response := executeGraphQLQuery(t, server.URL, request)
 		// assert.Empty(t, response.Errors, "Should not have GraphQL errors")
-		// 
+		//
 		// searchData := response.Data.(map[string]interface{})["searchEntities"].(map[string]interface{})
 		// assert.GreaterOrEqual(t, searchData["totalCount"].(float64), 0.0, "Should return total count")
-		// 
+		//
 		// entities := searchData["entities"].([]interface{})
 		// assert.LessOrEqual(t, len(entities), 20, "Should respect page size")
-		// 
+		//
 		// // Verify all returned entities match filters
 		// for _, entity := range entities {
 		//     entityMap := entity.(map[string]interface{})
@@ -141,7 +144,7 @@ func TestGraphQLAPI_EntityQueries_ShouldFailInitially(t *testing.T) {
 		//     assert.True(t, entityMap["flagged"].(bool), "Should be flagged")
 		// }
 	})
-	
+
 	t.Run("should query entity relationships", func(t *testing.T) {
 		// Test relationship queries - FR-020 from spec
 		query := `
@@ -171,22 +174,22 @@ func TestGraphQLAPI_EntityQueries_ShouldFailInitially(t *testing.T) {
 				}
 			}
 		`
-		
+
 		request := GraphQLRequest{
 			Query: query,
 			Variables: map[string]interface{}{
-				"entityId": "entity-456",
-				"depth": 2,
+				"entityId":          "entity-456",
+				"depth":             2,
 				"relationshipTypes": []string{"TRANSFERRED_TO", "OWNS", "CONTROLS"},
 			},
 		}
-		
+
 		// response := executeGraphQLQuery(t, server.URL, request)
 		// assert.Empty(t, response.Errors, "Should not have GraphQL errors")
-		// 
+		//
 		// entityData := response.Data.(map[string]interface{})["entity"].(map[string]interface{})
 		// relationshipsData := entityData["relationships"].(map[string]interface{})
-		// 
+		//
 		// relationships := relationshipsData["relationships"].([]interface{})
 		// for _, rel := range relationships {
 		//     relMap := rel.(map[string]interface{})
@@ -194,7 +197,7 @@ func TestGraphQLAPI_EntityQueries_ShouldFailInitially(t *testing.T) {
 		//     assert.NotEmpty(t, relMap["type"], "Should have relationship type")
 		//     assert.GreaterOrEqual(t, relMap["strength"].(float64), 0.0, "Should have valid strength")
 		//     assert.LessOrEqual(t, relMap["strength"].(float64), 1.0, "Should have valid strength")
-		//     
+		//
 		//     targetEntity := relMap["targetEntity"].(map[string]interface{})
 		//     assert.NotEmpty(t, targetEntity["id"], "Should have target entity ID")
 		//     assert.NotEmpty(t, targetEntity["name"], "Should have target entity name")
@@ -204,7 +207,7 @@ func TestGraphQLAPI_EntityQueries_ShouldFailInitially(t *testing.T) {
 
 func TestGraphQLAPI_TransactionQueries_ShouldFailInitially(t *testing.T) {
 	t.Skip("INTENTIONALLY FAILING: GraphQL API Gateway not implemented yet (T017)")
-	
+
 	t.Run("should query transaction paths", func(t *testing.T) {
 		// Test path finding - FR-021 from spec
 		query := `
@@ -234,41 +237,41 @@ func TestGraphQLAPI_TransactionQueries_ShouldFailInitially(t *testing.T) {
 				}
 			}
 		`
-		
+
 		request := GraphQLRequest{
 			Query: query,
 			Variables: map[string]interface{}{
-				"from": "entity-123",
-				"to": "entity-789",
+				"from":     "entity-123",
+				"to":       "entity-789",
 				"maxDepth": 4,
 				"filters": map[string]interface{}{
 					"minAmount": 1000.0,
 					"dateRange": map[string]string{
 						"from": "2024-01-01",
-						"to": "2024-01-31",
+						"to":   "2024-01-31",
 					},
 					"excludeDirectPaths": false,
 				},
 			},
 		}
-		
+
 		// response := executeGraphQLQuery(t, server.URL, request)
 		// assert.Empty(t, response.Errors, "Should not have GraphQL errors")
-		// 
+		//
 		// pathsData := response.Data.(map[string]interface{})["transactionPaths"].(map[string]interface{})
 		// paths := pathsData["paths"].([]interface{})
-		// 
+		//
 		// for _, path := range paths {
 		//     pathMap := path.(map[string]interface{})
 		//     assert.GreaterOrEqual(t, pathMap["length"].(float64), 1.0, "Should have valid path length")
 		//     assert.GreaterOrEqual(t, pathMap["totalAmount"].(float64), 1000.0, "Should meet minimum amount filter")
 		//     assert.GreaterOrEqual(t, pathMap["riskScore"].(float64), 0.0, "Should have valid risk score")
-		//     
+		//
 		//     transactions := pathMap["transactions"].([]interface{})
 		//     assert.GreaterOrEqual(t, len(transactions), 1, "Should have at least one transaction")
 		// }
 	})
-	
+
 	t.Run("should aggregate transaction statistics", func(t *testing.T) {
 		// Test aggregation queries - FR-022 from spec
 		query := `
@@ -296,28 +299,28 @@ func TestGraphQLAPI_TransactionQueries_ShouldFailInitially(t *testing.T) {
 				}
 			}
 		`
-		
+
 		request := GraphQLRequest{
 			Query: query,
 			Variables: map[string]interface{}{
 				"entityId": "entity-456",
 				"timeRange": map[string]string{
 					"from": "2024-01-01T00:00:00Z",
-					"to": "2024-01-31T23:59:59Z",
+					"to":   "2024-01-31T23:59:59Z",
 				},
 				"groupBy": []string{"PAYMENT_METHOD", "COUNTRY"},
 			},
 		}
-		
+
 		// response := executeGraphQLQuery(t, server.URL, request)
 		// assert.Empty(t, response.Errors, "Should not have GraphQL errors")
-		// 
+		//
 		// entityData := response.Data.(map[string]interface{})["entity"].(map[string]interface{})
 		// statsData := entityData["transactionStatistics"].(map[string]interface{})
-		// 
+		//
 		// assert.GreaterOrEqual(t, statsData["totalTransactions"].(float64), 0.0, "Should have valid transaction count")
 		// assert.GreaterOrEqual(t, statsData["totalAmount"].(float64), 0.0, "Should have valid total amount")
-		// 
+		//
 		// groupedData := statsData["groupedData"].([]interface{})
 		// for _, group := range groupedData {
 		//     groupMap := group.(map[string]interface{})
@@ -329,7 +332,7 @@ func TestGraphQLAPI_TransactionQueries_ShouldFailInitially(t *testing.T) {
 
 func TestGraphQLAPI_AlertManagement_ShouldFailInitially(t *testing.T) {
 	t.Skip("INTENTIONALLY FAILING: GraphQL API Gateway not implemented yet (T018)")
-	
+
 	t.Run("should query alerts with complex filters", func(t *testing.T) {
 		// Test alert queries - FR-023 from spec
 		query := `
@@ -367,37 +370,37 @@ func TestGraphQLAPI_AlertManagement_ShouldFailInitially(t *testing.T) {
 				}
 			}
 		`
-		
+
 		request := GraphQLRequest{
 			Query: query,
 			Variables: map[string]interface{}{
 				"filters": map[string]interface{}{
 					"priorities": []string{"HIGH", "CRITICAL"},
-					"statuses": []string{"OPEN", "INVESTIGATING"},
-					"entityIds": []string{"entity-123", "entity-456"},
+					"statuses":   []string{"OPEN", "INVESTIGATING"},
+					"entityIds":  []string{"entity-123", "entity-456"},
 					"dateRange": map[string]string{
 						"from": "2024-01-01",
-						"to": "2024-01-31",
+						"to":   "2024-01-31",
 					},
 					"ruleTypes": []string{"TRANSACTION_MONITORING", "PATTERN_DETECTION"},
 				},
 				"pagination": map[string]interface{}{
-					"page":     1,
-					"pageSize": 25,
-					"sortBy":   "priority",
+					"page":      1,
+					"pageSize":  25,
+					"sortBy":    "priority",
 					"sortOrder": "DESC",
 				},
 			},
 		}
-		
+
 		// response := executeGraphQLQuery(t, server.URL, request)
 		// assert.Empty(t, response.Errors, "Should not have GraphQL errors")
-		// 
+		//
 		// alertsData := response.Data.(map[string]interface{})["alerts"].(map[string]interface{})
 		// alerts := alertsData["alerts"].([]interface{})
-		// 
+		//
 		// assert.LessOrEqual(t, len(alerts), 25, "Should respect page size")
-		// 
+		//
 		// for _, alert := range alerts {
 		//     alertMap := alert.(map[string]interface{})
 		//     assert.Contains(t, []string{"HIGH", "CRITICAL"}, alertMap["priority"], "Should match priority filter")
@@ -406,7 +409,7 @@ func TestGraphQLAPI_AlertManagement_ShouldFailInitially(t *testing.T) {
 		//     assert.NotEmpty(t, alertMap["description"], "Should have alert description")
 		// }
 	})
-	
+
 	t.Run("should update alert status via mutation", func(t *testing.T) {
 		// Test alert mutations - FR-024 from spec
 		mutation := `
@@ -431,33 +434,33 @@ func TestGraphQLAPI_AlertManagement_ShouldFailInitially(t *testing.T) {
 				}
 			}
 		`
-		
+
 		request := GraphQLRequest{
 			Query: mutation,
 			Variables: map[string]interface{}{
 				"alertId": "alert-789",
 				"updates": map[string]interface{}{
-					"status": "INVESTIGATING",
+					"status":     "INVESTIGATING",
 					"assignedTo": "analyst@aegisshield.com",
-					"priority": "HIGH",
+					"priority":   "HIGH",
 					"investigationNote": map[string]interface{}{
 						"content": "Reviewing transaction patterns and requesting additional KYC documentation",
-						"author": "senior_analyst@aegisshield.com",
+						"author":  "senior_analyst@aegisshield.com",
 					},
 				},
 			},
 		}
-		
+
 		// response := executeGraphQLQuery(t, server.URL, request)
 		// assert.Empty(t, response.Errors, "Should not have GraphQL errors")
-		// 
+		//
 		// updateData := response.Data.(map[string]interface{})["updateAlert"].(map[string]interface{})
 		// assert.True(t, updateData["success"].(bool), "Should successfully update alert")
-		// 
+		//
 		// alert := updateData["alert"].(map[string]interface{})
 		// assert.Equal(t, "INVESTIGATING", alert["status"], "Should update status")
 		// assert.Equal(t, "analyst@aegisshield.com", alert["assignedTo"], "Should update assignment")
-		// 
+		//
 		// notes := alert["investigationNotes"].([]interface{})
 		// assert.GreaterOrEqual(t, len(notes), 1, "Should add investigation note")
 	})
@@ -466,18 +469,18 @@ func TestGraphQLAPI_AlertManagement_ShouldFailInitially(t *testing.T) {
 // Helper function to execute GraphQL queries (will be implemented when API gateway exists)
 func executeGraphQLQuery(t *testing.T, serverURL string, request GraphQLRequest) GraphQLResponse {
 	t.Skip("executeGraphQLQuery helper not implemented - waiting for API gateway")
-	
+
 	requestBody, err := json.Marshal(request)
 	require.NoError(t, err, "Should marshal GraphQL request")
-	
+
 	resp, err := http.Post(serverURL+"/graphql", "application/json", bytes.NewBuffer(requestBody))
 	require.NoError(t, err, "Should send GraphQL request")
 	defer resp.Body.Close()
-	
+
 	var response GraphQLResponse
 	err = json.NewDecoder(resp.Body).Decode(&response)
 	require.NoError(t, err, "Should decode GraphQL response")
-	
+
 	return response
 }
 

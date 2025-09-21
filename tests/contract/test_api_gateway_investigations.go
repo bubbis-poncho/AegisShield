@@ -1,3 +1,6 @@
+//go:build integration
+// +build integration
+
 package contract
 
 import (
@@ -194,14 +197,14 @@ func TestAPIGateway_Investigation_Endpoints(t *testing.T) {
 
 // Test data structures - these define the expected API contracts
 type Investigation struct {
-	ID          string    `json:"id"`
-	Title       string    `json:"title"`
-	Description string    `json:"description"`
-	Status      string    `json:"status"`
-	Priority    string    `json:"priority"`
-	AssignedTo  string    `json:"assigned_to"`
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
+	ID          string     `json:"id"`
+	Title       string     `json:"title"`
+	Description string     `json:"description"`
+	Status      string     `json:"status"`
+	Priority    string     `json:"priority"`
+	AssignedTo  string     `json:"assigned_to"`
+	CreatedAt   time.Time  `json:"created_at"`
+	UpdatedAt   time.Time  `json:"updated_at"`
 	ClosedAt    *time.Time `json:"closed_at,omitempty"`
 }
 
@@ -230,11 +233,11 @@ type Entity struct {
 }
 
 type TimelineEvent struct {
-	ID          string    `json:"id"`
-	Timestamp   time.Time `json:"timestamp"`
-	EventType   string    `json:"event_type"`
-	Description string    `json:"description"`
-	EntityID    string    `json:"entity_id"`
+	ID          string                 `json:"id"`
+	Timestamp   time.Time              `json:"timestamp"`
+	EventType   string                 `json:"event_type"`
+	Description string                 `json:"description"`
+	EntityID    string                 `json:"entity_id"`
 	Metadata    map[string]interface{} `json:"metadata"`
 }
 

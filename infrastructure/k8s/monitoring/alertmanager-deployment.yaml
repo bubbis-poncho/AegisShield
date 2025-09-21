@@ -1,0 +1,185 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: alertmanager
+  namespace: monitoring
+  labels:
+    app: alertmanager
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: alertmanager
+  template:
+    metadata:
+      labels:
+        app: alertmanager
+    spec:
+      containers:
+        - name: alertmanager
+          image: prom/alertmanager:v0.25.0
+          args:
+            - "--config.file=/etc/alertmanager/alertmanager.yml"
+            - "--storage.path=/alertmanager"
+            - "--data.retention=168h"
+            - "--web.listen-address=0.0.0.0:9093"
+            - "--web.route-prefix=/"
+            - "--cluster.listen-address=0.0.0.0:9094"
+            - "--cluster.peer=alertmanager-0.alertmanager.monitoring.svc.cluster.local:9094"
+            - "--cluster.peer=alertmanager-1.alertmanager.monitoring.svc.cluster.local:9094"
+          ports:
+            - containerPort: 9093
+              name: web
+            - containerPort: 9094
+              name: cluster
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "200m"
+          volumeMounts:
+            - name: alertmanager-config
+              mountPath: /etc/alertmanager
+            - name: alertmanager-storage
+              mountPath: /alertmanager
+          livenessProbe:
+            httpGet:
+              path: /-/healthy
+              port: 9093
+            initialDelaySeconds: 30
+            timeoutSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /-/ready
+              port: 9093
+            initialDelaySeconds: 30
+            timeoutSeconds: 30
+      volumes:
+        - name: alertmanager-config
+          configMap:
+            name: alertmanager-config
+        - name: alertmanager-storage
+          persistentVolumeClaim:
+            claimName: alertmanager-storage
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: alertmanager
+  namespace: monitoring
+  labels:
+    app: alertmanager
+spec:
+  type: ClusterIP
+  ports:
+    - port: 9093
+      targetPort: 9093
+      name: web
+    - port: 9094
+      targetPort: 9094
+      name: cluster
+  selector:
+    app: alertmanager
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: alertmanager-headless
+  namespace: monitoring
+  labels:
+    app: alertmanager
+spec:
+  clusterIP: None
+  ports:
+    - port: 9093
+      targetPort: 9093
+      name: web
+    - port: 9094
+      targetPort: 9094
+      name: cluster
+  selector:
+    app: alertmanager
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: alertmanager-storage
+  namespace: monitoring
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: fast-ssd
+---
+# ServiceMonitor for Alertmanager metrics
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: alertmanager
+  namespace: monitoring
+  labels:
+    app: alertmanager
+spec:
+  selector:
+    matchLabels:
+      app: alertmanager
+  endpoints:
+    - port: web
+      interval: 30s
+      path: /metrics
+---
+# PrometheusRule for Alertmanager self-monitoring
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: alertmanager-rules
+  namespace: monitoring
+  labels:
+    app: alertmanager
+spec:
+  groups:
+    - name: alertmanager.rules
+      rules:
+        - alert: AlertmanagerDown
+          expr: up{job="alertmanager"} == 0
+          for: 5m
+          labels:
+            severity: critical
+            service: alertmanager
+          annotations:
+            summary: "Alertmanager instance is down"
+            description: "Alertmanager {{ $labels.instance }} has been down for more than 5 minutes."
+        
+        - alert: AlertmanagerConfigInconsistent
+          expr: count by (service) (count by (service, instance) (alertmanager_config_hash)) > 1
+          for: 5m
+          labels:
+            severity: warning
+            service: alertmanager
+          annotations:
+            summary: "Alertmanager configurations differ"
+            description: "Alertmanager instances have different configurations."
+        
+        - alert: AlertmanagerClusterDown
+          expr: alertmanager_cluster_members < 2
+          for: 5m
+          labels:
+            severity: warning
+            service: alertmanager
+          annotations:
+            summary: "Alertmanager cluster is degraded"
+            description: "Alertmanager cluster has less than 2 members."
+        
+        - alert: AlertmanagerFailedNotifications
+          expr: rate(alertmanager_notifications_failed_total[5m]) > 0.01
+          for: 10m
+          labels:
+            severity: warning
+            service: alertmanager
+          annotations:
+            summary: "Alertmanager failing to send notifications"
+            description: "Alertmanager is failing to send notifications at rate {{ $value }}/sec."

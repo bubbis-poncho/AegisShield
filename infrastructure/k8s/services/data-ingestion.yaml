@@ -1,0 +1,103 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: data-ingestion
+  namespace: aegisshield
+  labels:
+    app: data-ingestion
+    tier: backend
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: data-ingestion
+  template:
+    metadata:
+      labels:
+        app: data-ingestion
+        tier: backend
+    spec:
+      containers:
+      - name: data-ingestion
+        image: aegisshield/data-ingestion:latest
+        ports:
+        - containerPort: 8060
+        env:
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: database-secrets
+              key: postgresql-url
+        - name: KAFKA_BROKERS
+          value: "kafka:9092"
+        - name: NEO4J_URL
+          valueFrom:
+            secretKeyRef:
+              name: database-secrets
+              key: neo4j-url
+        - name: PORT
+          value: "8060"
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8060
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8060
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      imagePullSecrets:
+      - name: registry-secret
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: data-ingestion-service
+  namespace: aegisshield
+  labels:
+    app: data-ingestion
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8060
+    targetPort: 8060
+    protocol: TCP
+    name: http
+  selector:
+    app: data-ingestion
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: data-ingestion-hpa
+  namespace: aegisshield
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: data-ingestion
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80

@@ -1,0 +1,278 @@
+# GraphQL schema for AegisShield API Gateway
+
+scalar Time
+scalar UUID
+
+type Query {
+  # Investigation queries
+  investigations(filter: InvestigationFilter): [Investigation!]!
+  investigation(id: UUID!): Investigation
+  
+  # Alert queries
+  alerts(filter: AlertFilter): [Alert!]!
+  alert(id: UUID!): Alert
+  
+  # Entity queries
+  entities(filter: EntityFilter): [Entity!]!
+  entity(id: UUID!): Entity
+  
+  # Graph queries
+  graphExploration(entityId: UUID!, depth: Int!): GraphResult!
+  
+  # Search queries
+  search(query: String!, type: SearchType): [SearchResult!]!
+}
+
+type Mutation {
+  # Investigation mutations
+  createInvestigation(input: CreateInvestigationInput!): Investigation!
+  updateInvestigation(id: UUID!, input: UpdateInvestigationInput!): Investigation!
+  closeInvestigation(id: UUID!, resolution: String!): Investigation!
+  
+  # Alert mutations
+  acknowledgeAlert(id: UUID!): Alert!
+  escalateAlert(id: UUID!, assignee: String!): Alert!
+  
+  # Entity mutations
+  mergeEntities(sourceId: UUID!, targetId: UUID!): Entity!
+  
+  # Transaction mutations
+  ingestTransaction(input: TransactionInput!): Transaction!
+}
+
+# Investigation types
+type Investigation {
+  id: UUID!
+  title: String!
+  description: String!
+  status: InvestigationStatus!
+  priority: Priority!
+  assignee: String
+  createdAt: Time!
+  updatedAt: Time!
+  closedAt: Time
+  alerts: [Alert!]!
+  entities: [Entity!]!
+  findings: [Finding!]!
+}
+
+enum InvestigationStatus {
+  OPEN
+  IN_PROGRESS
+  CLOSED
+  ESCALATED
+}
+
+input InvestigationFilter {
+  status: InvestigationStatus
+  priority: Priority
+  assignee: String
+  createdAfter: Time
+  createdBefore: Time
+}
+
+input CreateInvestigationInput {
+  title: String!
+  description: String!
+  priority: Priority!
+  assignee: String
+  alertIds: [UUID!]
+}
+
+input UpdateInvestigationInput {
+  title: String
+  description: String
+  status: InvestigationStatus
+  priority: Priority
+  assignee: String
+}
+
+# Alert types
+type Alert {
+  id: UUID!
+  title: String!
+  description: String!
+  severity: Severity!
+  status: AlertStatus!
+  riskScore: Float!
+  triggeredAt: Time!
+  acknowledgedAt: Time
+  escalatedAt: Time
+  entities: [Entity!]!
+  transactions: [Transaction!]!
+  ruleId: String!
+  metadata: String
+}
+
+enum AlertStatus {
+  ACTIVE
+  ACKNOWLEDGED
+  ESCALATED
+  RESOLVED
+  FALSE_POSITIVE
+}
+
+enum Severity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+input AlertFilter {
+  status: AlertStatus
+  severity: Severity
+  riskScoreMin: Float
+  riskScoreMax: Float
+  triggeredAfter: Time
+  triggeredBefore: Time
+}
+
+# Entity types
+type Entity {
+  id: UUID!
+  type: EntityType!
+  name: String!
+  identifiers: [EntityIdentifier!]!
+  attributes: String
+  riskScore: Float!
+  createdAt: Time!
+  updatedAt: Time!
+  relationships: [EntityRelationship!]!
+  transactions: [Transaction!]!
+}
+
+enum EntityType {
+  PERSON
+  ORGANIZATION
+  BANK_ACCOUNT
+  CREDIT_CARD
+  ADDRESS
+  PHONE_NUMBER
+  EMAIL
+  UNKNOWN
+}
+
+type EntityIdentifier {
+  type: String!
+  value: String!
+  confidence: Float!
+}
+
+type EntityRelationship {
+  id: UUID!
+  sourceEntity: Entity!
+  targetEntity: Entity!
+  type: String!
+  strength: Float!
+  createdAt: Time!
+  metadata: String
+}
+
+input EntityFilter {
+  type: EntityType
+  name: String
+  riskScoreMin: Float
+  riskScoreMax: Float
+}
+
+# Transaction types
+type Transaction {
+  id: UUID!
+  amount: Float!
+  currency: String!
+  timestamp: Time!
+  description: String
+  sourceAccount: String!
+  targetAccount: String!
+  sourceEntity: Entity
+  targetEntity: Entity
+  type: TransactionType!
+  status: TransactionStatus!
+  riskScore: Float!
+  metadata: String
+}
+
+enum TransactionType {
+  TRANSFER
+  DEPOSIT
+  WITHDRAWAL
+  PAYMENT
+  PURCHASE
+  REFUND
+  FEE
+  UNKNOWN
+}
+
+enum TransactionStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+input TransactionInput {
+  amount: Float!
+  currency: String!
+  timestamp: Time!
+  description: String
+  sourceAccount: String!
+  targetAccount: String!
+  type: TransactionType!
+  metadata: String
+}
+
+# Graph types
+type GraphResult {
+  nodes: [GraphNode!]!
+  edges: [GraphEdge!]!
+  totalNodes: Int!
+  totalEdges: Int!
+}
+
+type GraphNode {
+  id: UUID!
+  type: EntityType!
+  label: String!
+  properties: String
+  riskScore: Float!
+}
+
+type GraphEdge {
+  id: UUID!
+  source: UUID!
+  target: UUID!
+  type: String!
+  weight: Float!
+  properties: String
+}
+
+# Search types
+enum SearchType {
+  ALL
+  ENTITIES
+  TRANSACTIONS
+  ALERTS
+  INVESTIGATIONS
+}
+
+union SearchResult = Entity | Transaction | Alert | Investigation
+
+# Finding type for investigations
+type Finding {
+  id: UUID!
+  investigationId: UUID!
+  title: String!
+  description: String!
+  severity: Severity!
+  evidence: String
+  createdAt: Time!
+  createdBy: String!
+}

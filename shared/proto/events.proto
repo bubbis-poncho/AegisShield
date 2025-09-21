@@ -1,0 +1,552 @@
+syntax = "proto3";
+
+package aegisshield.events;
+
+option go_package = "aegisshield/shared/proto/events";
+
+import "google/protobuf/timestamp.proto";
+import "shared/proto/shared.proto";
+
+// Event-Driven Architecture - T024
+// Constitutional Principle: Event-Driven Architecture & Real-time Processing
+
+// Common Event Structure
+message BaseEvent {
+  string event_id = 1;
+  string event_type = 2;
+  string source_service = 3;
+  string correlation_id = 4;
+  google.protobuf.Timestamp timestamp = 5;
+  string tenant_id = 6;
+  map<string, string> metadata = 7;
+  EventPriority priority = 8;
+  string schema_version = 9;
+}
+
+enum EventPriority {
+  EVENT_PRIORITY_UNSPECIFIED = 0;
+  LOW = 1;
+  NORMAL = 2;
+  HIGH = 3;
+  CRITICAL = 4;
+}
+
+// Data Ingestion Events
+message FileUploadEvent {
+  BaseEvent base = 1;
+  string file_id = 2;
+  string file_name = 3;
+  string file_type = 4;
+  int64 file_size = 5;
+  string upload_status = 6;
+  string s3_key = 7;
+  string uploaded_by = 8;
+  map<string, string> file_metadata = 9;
+}
+
+message DataProcessingEvent {
+  BaseEvent base = 1;
+  string job_id = 2;
+  string file_id = 3;
+  DataProcessingStatus status = 4;
+  int32 records_processed = 5;
+  int32 records_failed = 6;
+  repeated string validation_errors = 7;
+  double processing_time_ms = 8;
+  DataProcessingMetrics metrics = 9;
+}
+
+enum DataProcessingStatus {
+  DATA_PROCESSING_STATUS_UNSPECIFIED = 0;
+  STARTED = 1;
+  IN_PROGRESS = 2;
+  COMPLETED = 3;
+  FAILED = 4;
+  CANCELLED = 5;
+  RETRYING = 6;
+}
+
+message DataProcessingMetrics {
+  int32 total_records = 1;
+  int32 valid_records = 2;
+  int32 invalid_records = 3;
+  int32 duplicate_records = 4;
+  double data_quality_score = 5;
+  repeated DataQualityIssue quality_issues = 6;
+}
+
+message DataQualityIssue {
+  string field_name = 1;
+  string issue_type = 2;
+  string description = 3;
+  int32 occurrence_count = 4;
+  double severity_score = 5;
+}
+
+message TransactionIngestionEvent {
+  BaseEvent base = 1;
+  string transaction_id = 2;
+  shared.Transaction transaction_data = 3;
+  IngestionStatus ingestion_status = 4;
+  repeated string validation_errors = 5;
+  string source_system = 6;
+  bool is_duplicate = 7;
+  string duplicate_of = 8;
+}
+
+enum IngestionStatus {
+  INGESTION_STATUS_UNSPECIFIED = 0;
+  RECEIVED = 1;
+  VALIDATED = 2;
+  STORED = 3;
+  REJECTED = 4;
+  DUPLICATE_DETECTED = 5;
+}
+
+// Entity Resolution Events
+message EntityResolvedEvent {
+  BaseEvent base = 1;
+  string entity_id = 2;
+  shared.EntityType entity_type = 3;
+  ResolutionMethod resolution_method = 4;
+  double confidence_score = 5;
+  repeated string merged_entity_ids = 6;
+  map<string, string> resolved_attributes = 7;
+  string resolved_by = 8;
+  int32 conflicts_count = 9;
+}
+
+enum ResolutionMethod {
+  RESOLUTION_METHOD_UNSPECIFIED = 0;
+  EXACT_MATCH = 1;
+  FUZZY_MATCH = 2;
+  MACHINE_LEARNING = 3;
+  MANUAL_RESOLUTION = 4;
+  RULE_BASED = 5;
+}
+
+message DuplicateDetectedEvent {
+  BaseEvent base = 1;
+  string primary_entity_id = 1;
+  repeated string duplicate_entity_ids = 2;
+  shared.EntityType entity_type = 3;
+  double similarity_score = 4;
+  repeated string matching_fields = 5;
+  DuplicateAction recommended_action = 6;
+  bool requires_manual_review = 7;
+}
+
+enum DuplicateAction {
+  DUPLICATE_ACTION_UNSPECIFIED = 0;
+  AUTO_MERGE = 1;
+  MANUAL_REVIEW = 2;
+  IGNORE = 3;
+  FLAG_FOR_INVESTIGATION = 4;
+}
+
+message EntityLinkCreatedEvent {
+  BaseEvent base = 1;
+  string source_entity_id = 2;
+  string target_entity_id = 3;
+  string relationship_type = 4;
+  double relationship_strength = 5;
+  repeated string supporting_transactions = 6;
+  LinkDiscoveryMethod discovery_method = 7;
+  map<string, string> link_attributes = 8;
+}
+
+enum LinkDiscoveryMethod {
+  LINK_DISCOVERY_METHOD_UNSPECIFIED = 0;
+  TRANSACTION_ANALYSIS = 1;
+  ADDRESS_MATCHING = 2;
+  PHONE_MATCHING = 3;
+  EMAIL_MATCHING = 4;
+  NETWORK_ANALYSIS = 5;
+  MANUAL_LINKING = 6;
+}
+
+// Alerting Events
+message AlertTriggeredEvent {
+  BaseEvent base = 1;
+  string alert_id = 2;
+  string rule_id = 3;
+  string rule_name = 4;
+  string transaction_id = 5;
+  string entity_id = 6;
+  AlertSeverity severity = 7;
+  double risk_score = 8;
+  string alert_reason = 9;
+  repeated AlertEvidence evidence = 10;
+  bool requires_immediate_action = 11;
+}
+
+enum AlertSeverity {
+  ALERT_SEVERITY_UNSPECIFIED = 0;
+  LOW = 1;
+  MEDIUM = 2;
+  HIGH = 3;
+  CRITICAL = 4;
+}
+
+message AlertEvidence {
+  string evidence_type = 1;
+  string description = 2;
+  double relevance_score = 3;
+  map<string, string> evidence_data = 4;
+}
+
+message AlertStatusChangedEvent {
+  BaseEvent base = 1;
+  string alert_id = 2;
+  AlertStatus old_status = 3;
+  AlertStatus new_status = 4;
+  string changed_by = 5;
+  string reason = 6;
+  google.protobuf.Timestamp resolution_time = 7;
+  bool is_escalation = 8;
+}
+
+enum AlertStatus {
+  ALERT_STATUS_UNSPECIFIED = 0;
+  OPEN = 1;
+  IN_PROGRESS = 2;
+  ESCALATED = 3;
+  CLOSED_TRUE_POSITIVE = 4;
+  CLOSED_FALSE_POSITIVE = 5;
+  CLOSED_BENIGN = 6;
+  SUPPRESSED = 7;
+}
+
+message RuleUpdatedEvent {
+  BaseEvent base = 1;
+  string rule_id = 2;
+  string rule_name = 3;
+  RuleUpdateType update_type = 4;
+  map<string, string> changes = 5;
+  string updated_by = 6;
+  bool is_active = 7;
+  string validation_status = 8;
+}
+
+enum RuleUpdateType {
+  RULE_UPDATE_TYPE_UNSPECIFIED = 0;
+  CREATED = 1;
+  MODIFIED = 2;
+  ACTIVATED = 3;
+  DEACTIVATED = 4;
+  DELETED = 5;
+}
+
+// Graph Engine Events
+message GraphUpdatedEvent {
+  BaseEvent base = 1;
+  string entity_id = 2;
+  GraphUpdateType update_type = 3;
+  repeated string affected_nodes = 4;
+  repeated string affected_relationships = 5;
+  string graph_version = 6;
+  bool validation_passed = 7;
+  GraphUpdateMetrics metrics = 8;
+}
+
+enum GraphUpdateType {
+  GRAPH_UPDATE_TYPE_UNSPECIFIED = 0;
+  NODE_CREATED = 1;
+  NODE_UPDATED = 2;
+  NODE_DELETED = 3;
+  RELATIONSHIP_CREATED = 4;
+  RELATIONSHIP_UPDATED = 5;
+  RELATIONSHIP_DELETED = 6;
+  BULK_UPDATE = 7;
+}
+
+message GraphUpdateMetrics {
+  int32 nodes_affected = 1;
+  int32 relationships_affected = 2;
+  double update_time_ms = 3;
+  int32 index_updates = 4;
+}
+
+message SuspiciousPatternDetectedEvent {
+  BaseEvent base = 1;
+  string pattern_id = 2;
+  PatternType pattern_type = 3;
+  double confidence_score = 4;
+  repeated string involved_entities = 5;
+  repeated string involved_transactions = 6;
+  PatternMetrics pattern_metrics = 7;
+  shared.TimeRange time_span = 8;
+  shared.RiskLevel risk_level = 9;
+}
+
+enum PatternType {
+  PATTERN_TYPE_UNSPECIFIED = 0;
+  LAYERING = 1;
+  SMURFING = 2;
+  ROUND_TRIPPING = 3;
+  STRUCTURING = 4;
+  RAPID_MOVEMENT = 5;
+  CIRCULAR_TRADING = 6;
+  SUSPICIOUS_NETWORK = 7;
+}
+
+message PatternMetrics {
+  int32 entity_count = 1;
+  int32 transaction_count = 2;
+  double total_amount = 3;
+  int32 pattern_depth = 4;
+  double velocity = 5;
+  int32 jurisdictions_involved = 6;
+}
+
+message NetworkAnalysisCompletedEvent {
+  BaseEvent base = 1;
+  string analysis_id = 2;
+  NetworkAnalysisType analysis_type = 3;
+  NetworkAnalysisResult result = 4;
+  double computation_time_ms = 5;
+  int32 nodes_analyzed = 6;
+  int32 relationships_analyzed = 7;
+  repeated string anomalies_detected = 8;
+}
+
+enum NetworkAnalysisType {
+  NETWORK_ANALYSIS_TYPE_UNSPECIFIED = 0;
+  CENTRALITY_ANALYSIS = 1;
+  COMMUNITY_DETECTION = 2;
+  PATH_ANALYSIS = 3;
+  VULNERABILITY_ASSESSMENT = 4;
+  INFLUENCE_ANALYSIS = 5;
+}
+
+message NetworkAnalysisResult {
+  repeated string key_entities = 1;
+  repeated string central_entities = 2;
+  int32 communities_found = 3;
+  double network_density = 4;
+  repeated NetworkAnomaly anomalies = 5;
+}
+
+message NetworkAnomaly {
+  string anomaly_type = 1;
+  repeated string affected_entities = 2;
+  double anomaly_score = 3;
+  string description = 4;
+}
+
+// API Gateway Events
+message ApiRequestEvent {
+  BaseEvent base = 1;
+  string request_id = 2;
+  string endpoint = 3;
+  string method = 4;
+  string user_id = 5;
+  string client_id = 6;
+  int32 status_code = 7;
+  double response_time_ms = 8;
+  int64 request_size_bytes = 9;
+  int64 response_size_bytes = 10;
+  string user_agent = 11;
+  string ip_address = 12;
+}
+
+message RateLimitExceededEvent {
+  BaseEvent base = 1;
+  string identifier = 2;
+  RateLimitScope scope = 3;
+  string endpoint = 4;
+  int32 limit = 5;
+  int32 current_count = 6;
+  string window = 7;
+  int32 retry_after_seconds = 8;
+}
+
+enum RateLimitScope {
+  RATE_LIMIT_SCOPE_UNSPECIFIED = 0;
+  USER = 1;
+  IP_ADDRESS = 2;
+  API_KEY = 3;
+  TENANT = 4;
+  GLOBAL = 5;
+}
+
+message AuthenticationEvent {
+  BaseEvent base = 1;
+  string user_id = 2;
+  string username = 3;
+  AuthenticationMethod method = 4;
+  AuthenticationResult result = 5;
+  string client_id = 6;
+  string ip_address = 7;
+  string user_agent = 8;
+  repeated string failed_attempts = 9;
+}
+
+enum AuthenticationMethod {
+  AUTHENTICATION_METHOD_UNSPECIFIED = 0;
+  USERNAME_PASSWORD = 1;
+  API_KEY = 2;
+  JWT_TOKEN = 3;
+  OAUTH2 = 4;
+  SAML = 5;
+  MFA = 6;
+}
+
+enum AuthenticationResult {
+  AUTHENTICATION_RESULT_UNSPECIFIED = 0;
+  SUCCESS = 1;
+  FAILED_INVALID_CREDENTIALS = 2;
+  FAILED_ACCOUNT_LOCKED = 3;
+  FAILED_EXPIRED_PASSWORD = 4;
+  FAILED_MFA_REQUIRED = 5;
+  FAILED_UNKNOWN_ERROR = 6;
+}
+
+// System Events
+message ServiceHealthChangedEvent {
+  BaseEvent base = 1;
+  string service_name = 2;
+  HealthStatus old_status = 3;
+  HealthStatus new_status = 4;
+  string reason = 5;
+  map<string, string> health_details = 6;
+  repeated string affected_endpoints = 7;
+}
+
+enum HealthStatus {
+  HEALTH_STATUS_UNSPECIFIED = 0;
+  HEALTHY = 1;
+  DEGRADED = 2;
+  UNHEALTHY = 3;
+  UNKNOWN = 4;
+}
+
+message ConfigurationChangedEvent {
+  BaseEvent base = 1;
+  string component = 2;
+  ConfigurationChangeType change_type = 3;
+  map<string, string> old_values = 4;
+  map<string, string> new_values = 5;
+  string changed_by = 6;
+  bool requires_restart = 7;
+}
+
+enum ConfigurationChangeType {
+  CONFIGURATION_CHANGE_TYPE_UNSPECIFIED = 0;
+  CREATED = 1;
+  UPDATED = 2;
+  DELETED = 3;
+  RESTORED = 4;
+}
+
+message ErrorEvent {
+  BaseEvent base = 1;
+  string error_code = 2;
+  string error_message = 3;
+  ErrorSeverity severity = 4;
+  string component = 5;
+  string operation = 6;
+  string stack_trace = 7;
+  map<string, string> error_context = 8;
+  bool is_recoverable = 9;
+}
+
+enum ErrorSeverity {
+  ERROR_SEVERITY_UNSPECIFIED = 0;
+  INFO = 1;
+  WARNING = 2;
+  ERROR = 3;
+  CRITICAL = 4;
+  FATAL = 5;
+}
+
+// Performance Events
+message PerformanceMetricEvent {
+  BaseEvent base = 1;
+  string metric_name = 2;
+  double metric_value = 3;
+  MetricType metric_type = 4;
+  string component = 5;
+  map<string, string> dimensions = 6;
+  google.protobuf.Timestamp measurement_time = 7;
+}
+
+enum MetricType {
+  METRIC_TYPE_UNSPECIFIED = 0;
+  COUNTER = 1;
+  GAUGE = 2;
+  HISTOGRAM = 3;
+  TIMER = 4;
+  RATE = 5;
+}
+
+message ThresholdExceededEvent {
+  BaseEvent base = 1;
+  string metric_name = 2;
+  double current_value = 3;
+  double threshold_value = 4;
+  ThresholdType threshold_type = 5;
+  string component = 6;
+  ThresholdSeverity severity = 7;
+  string recommended_action = 8;
+}
+
+enum ThresholdType {
+  THRESHOLD_TYPE_UNSPECIFIED = 0;
+  UPPER_LIMIT = 1;
+  LOWER_LIMIT = 2;
+  RATE_LIMIT = 3;
+  PERCENTAGE = 4;
+}
+
+enum ThresholdSeverity {
+  THRESHOLD_SEVERITY_UNSPECIFIED = 0;
+  WARNING = 1;
+  CRITICAL = 2;
+  EMERGENCY = 3;
+}
+
+// Audit Events
+message AuditEvent {
+  BaseEvent base = 1;
+  string actor_id = 2;
+  string actor_type = 3;
+  string action = 4;
+  string resource = 5;
+  string resource_id = 6;
+  AuditResult result = 7;
+  map<string, string> before_state = 8;
+  map<string, string> after_state = 9;
+  string reason = 10;
+  string ip_address = 11;
+  string user_agent = 12;
+}
+
+enum AuditResult {
+  AUDIT_RESULT_UNSPECIFIED = 0;
+  SUCCESS = 1;
+  FAILURE = 2;
+  PARTIAL_SUCCESS = 3;
+  UNAUTHORIZED = 4;
+  FORBIDDEN = 5;
+}
+
+// Data Retention Events
+message DataRetentionEvent {
+  BaseEvent base = 1;
+  RetentionAction action = 2;
+  string data_type = 3;
+  shared.TimeRange retention_period = 4;
+  int64 records_affected = 5;
+  string retention_policy_id = 6;
+  bool compliance_driven = 7;
+}
+
+enum RetentionAction {
+  RETENTION_ACTION_UNSPECIFIED = 0;
+  ARCHIVED = 1;
+  DELETED = 2;
+  ANONYMIZED = 3;
+  BACKED_UP = 4;
+  RESTORED = 5;
+}

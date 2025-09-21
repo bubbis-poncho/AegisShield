@@ -1,0 +1,493 @@
+syntax = "proto3";
+
+package aegisshield.alerting;
+
+option go_package = "aegisshield/shared/proto/alerting-engine";
+
+import "google/protobuf/timestamp.proto";
+import "shared/proto/shared.proto";
+
+// Alerting Engine Service - T021
+// Constitutional Principle: Real-time Defense & Real-time Processing
+
+service AlertingEngineService {
+  // Rule Management
+  rpc CreateRule(CreateRuleRequest) returns (CreateRuleResponse);
+  rpc UpdateRule(UpdateRuleRequest) returns (UpdateRuleResponse);
+  rpc DeleteRule(DeleteRuleRequest) returns (DeleteRuleResponse);
+  rpc GetRule(GetRuleRequest) returns (GetRuleResponse);
+  rpc ListRules(ListRulesRequest) returns (ListRulesResponse);
+  rpc ActivateRule(ActivateRuleRequest) returns (ActivateRuleResponse);
+  rpc DeactivateRule(DeactivateRuleRequest) returns (DeactivateRuleResponse);
+  
+  // Real-time Transaction Evaluation
+  rpc EvaluateTransaction(EvaluateTransactionRequest) returns (EvaluateTransactionResponse);
+  rpc EvaluateTransactionStream(stream EvaluateTransactionRequest) returns (stream EvaluateTransactionResponse);
+  
+  // Batch Evaluation
+  rpc EvaluateBatch(EvaluateBatchRequest) returns (EvaluateBatchResponse);
+  
+  // Alert Management
+  rpc GetAlert(GetAlertRequest) returns (GetAlertResponse);
+  rpc ListAlerts(ListAlertsRequest) returns (ListAlertsResponse);
+  rpc UpdateAlert(UpdateAlertRequest) returns (UpdateAlertResponse);
+  rpc CloseAlert(CloseAlertRequest) returns (CloseAlertResponse);
+  rpc EscalateAlert(EscalateAlertRequest) returns (EscalateAlertResponse);
+  
+  // Alert Search and Filtering
+  rpc SearchAlerts(SearchAlertsRequest) returns (SearchAlertsResponse);
+  rpc GetAlertsByEntity(GetAlertsByEntityRequest) returns (GetAlertsByEntityResponse);
+  rpc GetAlertStatistics(GetAlertStatisticsRequest) returns (GetAlertStatisticsResponse);
+  
+  // Watchlist Management
+  rpc AddToWatchlist(AddToWatchlistRequest) returns (AddToWatchlistResponse);
+  rpc RemoveFromWatchlist(RemoveFromWatchlistRequest) returns (RemoveFromWatchlistResponse);
+  rpc GetWatchlistStatus(GetWatchlistStatusRequest) returns (GetWatchlistStatusResponse);
+  
+  // Threshold Management
+  rpc UpdateThresholds(UpdateThresholdsRequest) returns (UpdateThresholdsResponse);
+  rpc GetThresholds(GetThresholdsRequest) returns (GetThresholdsResponse);
+  
+  // Health Check
+  rpc HealthCheck(HealthCheckRequest) returns (HealthCheckResponse);
+}
+
+// Rule Management Messages
+message CreateRuleRequest {
+  AlertRule rule = 1;
+  string created_by = 2;
+  bool activate_immediately = 3;
+  bool dry_run = 4;
+}
+
+message AlertRule {
+  string rule_id = 1;
+  string name = 2;
+  string description = 3;
+  RuleType rule_type = 4;
+  Severity severity = 5;
+  RuleConditions conditions = 6;
+  RuleActions actions = 7;
+  bool is_active = 8;
+  int32 priority = 9;
+  google.protobuf.Timestamp created_at = 10;
+  google.protobuf.Timestamp updated_at = 11;
+  string created_by = 12;
+  string updated_by = 13;
+  map<string, string> metadata = 14;
+}
+
+enum RuleType {
+  RULE_TYPE_UNSPECIFIED = 0;
+  TRANSACTION_AMOUNT_THRESHOLD = 1;
+  TRANSACTION_FREQUENCY = 2;
+  SUSPICIOUS_PATTERN = 3;
+  WATCHLIST_MATCH = 4;
+  VELOCITY_CHECK = 5;
+  GEOGRAPHIC_ANOMALY = 6;
+  BEHAVIORAL_ANOMALY = 7;
+  SANCTIONS_SCREENING = 8;
+  PEP_SCREENING = 9;
+  ADVERSE_MEDIA = 10;
+  COMPLEX_OWNERSHIP = 11;
+  UNUSUAL_TRANSACTION_TYPE = 12;
+  TIME_BASED_ANOMALY = 13;
+}
+
+enum Severity {
+  SEVERITY_UNSPECIFIED = 0;
+  LOW = 1;
+  MEDIUM = 2;
+  HIGH = 3;
+  CRITICAL = 4;
+}
+
+message RuleConditions {
+  repeated Condition conditions = 1;
+  LogicalOperator operator = 2;
+  shared.TimeRange time_window = 3;
+  bool require_all_conditions = 4;
+}
+
+message Condition {
+  string field_name = 1;
+  ConditionOperator operator = 2;
+  repeated string values = 3;
+  double numeric_value = 4;
+  ConditionType condition_type = 5;
+  map<string, string> parameters = 6;
+}
+
+enum ConditionOperator {
+  CONDITION_OPERATOR_UNSPECIFIED = 0;
+  EQUALS = 1;
+  NOT_EQUALS = 2;
+  GREATER_THAN = 3;
+  GREATER_THAN_OR_EQUAL = 4;
+  LESS_THAN = 5;
+  LESS_THAN_OR_EQUAL = 6;
+  CONTAINS = 7;
+  NOT_CONTAINS = 8;
+  STARTS_WITH = 9;
+  ENDS_WITH = 10;
+  REGEX_MATCH = 11;
+  IN_LIST = 12;
+  NOT_IN_LIST = 13;
+  BETWEEN = 14;
+  NULL_CHECK = 15;
+  NOT_NULL_CHECK = 16;
+}
+
+enum ConditionType {
+  CONDITION_TYPE_UNSPECIFIED = 0;
+  STATIC_VALUE = 1;
+  DYNAMIC_THRESHOLD = 2;
+  STATISTICAL_ANOMALY = 3;
+  HISTORICAL_COMPARISON = 4;
+  CROSS_ENTITY_COMPARISON = 5;
+}
+
+enum LogicalOperator {
+  LOGICAL_OPERATOR_UNSPECIFIED = 0;
+  AND = 1;
+  OR = 2;
+  NOT = 3;
+  XOR = 4;
+}
+
+message RuleActions {
+  repeated AlertAction actions = 1;
+  bool auto_escalate = 2;
+  int32 escalation_delay_minutes = 3;
+  repeated string notification_channels = 4;
+}
+
+message AlertAction {
+  ActionType action_type = 1;
+  map<string, string> parameters = 2;
+  int32 delay_seconds = 3;
+  bool is_required = 4;
+}
+
+enum ActionType {
+  ACTION_TYPE_UNSPECIFIED = 0;
+  CREATE_ALERT = 1;
+  SEND_EMAIL = 2;
+  SEND_SMS = 3;
+  WEBHOOK_CALL = 4;
+  BLOCK_TRANSACTION = 5;
+  FLAG_ENTITY = 6;
+  CREATE_CASE = 7;
+  ESCALATE_TO_HUMAN = 8;
+  LOG_EVENT = 9;
+  UPDATE_RISK_SCORE = 10;
+}
+
+message CreateRuleResponse {
+  string rule_id = 1;
+  bool success = 2;
+  string message = 3;
+  repeated shared.Error validation_errors = 4;
+}
+
+// Transaction Evaluation Messages
+message EvaluateTransactionRequest {
+  shared.Transaction transaction = 1;
+  EvaluationOptions options = 2;
+  string request_id = 3;
+}
+
+message EvaluationOptions {
+  repeated string rule_ids = 1;
+  bool include_historical_analysis = 2;
+  bool real_time_processing = 3;
+  int32 timeout_seconds = 4;
+  bool detailed_explanation = 5;
+}
+
+message EvaluateTransactionResponse {
+  string request_id = 1;
+  string transaction_id = 2;
+  EvaluationResult evaluation_result = 3;
+  repeated AlertTriggered alerts_triggered = 4;
+  shared.RiskLevel overall_risk_level = 5;
+  double risk_score = 6;
+  google.protobuf.Timestamp evaluated_at = 7;
+  double processing_time_ms = 8;
+}
+
+message EvaluationResult {
+  bool passed = 1;
+  int32 rules_evaluated = 2;
+  int32 rules_triggered = 3;
+  repeated RuleEvaluation rule_evaluations = 4;
+  string explanation = 5;
+}
+
+message RuleEvaluation {
+  string rule_id = 1;
+  string rule_name = 2;
+  bool triggered = 3;
+  double confidence_score = 4;
+  string explanation = 5;
+  map<string, string> evaluation_details = 6;
+}
+
+message AlertTriggered {
+  string alert_id = 1;
+  string rule_id = 2;
+  Severity severity = 3;
+  string message = 4;
+  repeated AlertAction actions_taken = 5;
+  google.protobuf.Timestamp triggered_at = 6;
+}
+
+// Alert Management Messages
+message Alert {
+  string alert_id = 1;
+  string rule_id = 2;
+  string rule_name = 3;
+  string transaction_id = 4;
+  string entity_id = 5;
+  AlertStatus status = 6;
+  Severity severity = 7;
+  string title = 8;
+  string description = 9;
+  double risk_score = 10;
+  map<string, string> alert_data = 11;
+  google.protobuf.Timestamp created_at = 12;
+  google.protobuf.Timestamp updated_at = 13;
+  google.protobuf.Timestamp closed_at = 14;
+  string assigned_to = 15;
+  string created_by_system = 16;
+  repeated AlertComment comments = 17;
+  repeated AlertAction actions_taken = 18;
+  map<string, string> metadata = 19;
+}
+
+enum AlertStatus {
+  ALERT_STATUS_UNSPECIFIED = 0;
+  OPEN = 1;
+  IN_PROGRESS = 2;
+  ESCALATED = 3;
+  CLOSED_TRUE_POSITIVE = 4;
+  CLOSED_FALSE_POSITIVE = 5;
+  CLOSED_BENIGN = 6;
+  SUPPRESSED = 7;
+  PENDING_REVIEW = 8;
+}
+
+message AlertComment {
+  string comment_id = 1;
+  string comment = 2;
+  string author = 3;
+  google.protobuf.Timestamp created_at = 4;
+  CommentType comment_type = 5;
+}
+
+enum CommentType {
+  COMMENT_TYPE_UNSPECIFIED = 0;
+  INVESTIGATION_NOTE = 1;
+  RESOLUTION_NOTE = 2;
+  ESCALATION_NOTE = 3;
+  SYSTEM_NOTE = 4;
+}
+
+message GetAlertRequest {
+  string alert_id = 1;
+  bool include_comments = 2;
+  bool include_actions = 3;
+}
+
+message GetAlertResponse {
+  Alert alert = 1;
+  bool found = 2;
+}
+
+message ListAlertsRequest {
+  AlertFilter filter = 1;
+  Pagination pagination = 2;
+  AlertSortBy sort_by = 3;
+  SortOrder sort_order = 4;
+}
+
+message AlertFilter {
+  repeated AlertStatus statuses = 1;
+  repeated Severity severities = 2;
+  repeated string rule_ids = 3;
+  repeated string entity_ids = 4;
+  string assigned_to = 5;
+  shared.TimeRange time_range = 6;
+  double min_risk_score = 7;
+  double max_risk_score = 8;
+}
+
+message Pagination {
+  int32 page = 1;
+  int32 page_size = 2;
+  string cursor = 3;
+}
+
+enum AlertSortBy {
+  ALERT_SORT_BY_UNSPECIFIED = 0;
+  CREATED_AT = 1;
+  UPDATED_AT = 2;
+  SEVERITY = 3;
+  RISK_SCORE = 4;
+  STATUS = 5;
+}
+
+enum SortOrder {
+  SORT_ORDER_UNSPECIFIED = 0;
+  ASC = 1;
+  DESC = 2;
+}
+
+message ListAlertsResponse {
+  repeated Alert alerts = 1;
+  int32 total_count = 2;
+  string next_cursor = 3;
+  bool has_more = 4;
+}
+
+// Batch Evaluation Messages
+message EvaluateBatchRequest {
+  repeated shared.Transaction transactions = 1;
+  EvaluationOptions options = 2;
+  string batch_id = 3;
+  bool parallel_processing = 4;
+}
+
+message EvaluateBatchResponse {
+  string batch_id = 1;
+  repeated EvaluateTransactionResponse results = 2;
+  BatchStatistics statistics = 3;
+  repeated shared.Error errors = 4;
+}
+
+message BatchStatistics {
+  int32 total_transactions = 1;
+  int32 processed_transactions = 2;
+  int32 failed_transactions = 3;
+  int32 alerts_generated = 4;
+  double average_risk_score = 5;
+  double processing_time_ms = 6;
+}
+
+// Alert Statistics Messages
+message GetAlertStatisticsRequest {
+  shared.TimeRange time_range = 1;
+  AlertFilter filter = 2;
+  StatisticsGroupBy group_by = 3;
+}
+
+enum StatisticsGroupBy {
+  STATISTICS_GROUP_BY_UNSPECIFIED = 0;
+  BY_DAY = 1;
+  BY_WEEK = 2;
+  BY_MONTH = 3;
+  BY_SEVERITY = 4;
+  BY_RULE = 5;
+  BY_STATUS = 6;
+}
+
+message GetAlertStatisticsResponse {
+  repeated AlertStatistic statistics = 1;
+  AlertSummary summary = 2;
+  google.protobuf.Timestamp generated_at = 3;
+}
+
+message AlertStatistic {
+  string group_key = 1;
+  int32 count = 2;
+  double percentage = 3;
+  repeated Severity severity_breakdown = 4;
+}
+
+message AlertSummary {
+  int32 total_alerts = 1;
+  int32 open_alerts = 2;
+  int32 closed_alerts = 3;
+  double average_resolution_time_hours = 4;
+  repeated TopRule top_triggered_rules = 5;
+}
+
+message TopRule {
+  string rule_id = 1;
+  string rule_name = 2;
+  int32 trigger_count = 3;
+}
+
+// Watchlist Messages
+message AddToWatchlistRequest {
+  string entity_id = 1;
+  WatchlistType watchlist_type = 2;
+  string reason = 3;
+  string added_by = 4;
+  google.protobuf.Timestamp expires_at = 5;
+}
+
+enum WatchlistType {
+  WATCHLIST_TYPE_UNSPECIFIED = 0;
+  SANCTIONS = 1;
+  PEP = 2;
+  ADVERSE_MEDIA = 3;
+  INTERNAL_WATCHLIST = 4;
+  REGULATORY_WATCHLIST = 5;
+  HIGH_RISK_ENTITY = 6;
+}
+
+message AddToWatchlistResponse {
+  bool success = 1;
+  string watchlist_entry_id = 2;
+  string message = 3;
+}
+
+// Threshold Management Messages
+message UpdateThresholdsRequest {
+  repeated ThresholdUpdate threshold_updates = 1;
+  string updated_by = 2;
+}
+
+message ThresholdUpdate {
+  string threshold_id = 1;
+  ThresholdType threshold_type = 2;
+  double value = 3;
+  shared.CurrencyCode currency = 4;
+  string description = 5;
+}
+
+enum ThresholdType {
+  THRESHOLD_TYPE_UNSPECIFIED = 0;
+  TRANSACTION_AMOUNT = 1;
+  DAILY_CUMULATIVE = 2;
+  WEEKLY_CUMULATIVE = 3;
+  MONTHLY_CUMULATIVE = 4;
+  VELOCITY_THRESHOLD = 5;
+  RISK_SCORE_THRESHOLD = 6;
+}
+
+message UpdateThresholdsResponse {
+  bool success = 1;
+  int32 thresholds_updated = 2;
+  repeated shared.Error errors = 3;
+}
+
+// Health Check Messages  
+message HealthCheckRequest {
+  string service = 1;
+}
+
+message HealthCheckResponse {
+  HealthStatus status = 1;
+  string message = 2;
+  map<string, string> details = 3;
+  google.protobuf.Timestamp timestamp = 4;
+}
+
+enum HealthStatus {
+  HEALTH_STATUS_UNSPECIFIED = 0;
+  HEALTHY = 1;
+  DEGRADED = 2;
+  UNHEALTHY = 3;
+}

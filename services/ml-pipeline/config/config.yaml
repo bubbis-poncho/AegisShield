@@ -1,0 +1,340 @@
+# AegisShield ML Pipeline Configuration
+
+# Application environment (development, staging, production)
+environment: development
+
+# Server configuration
+server:
+  http:
+    port: 8080
+    read_timeout: 30
+    write_timeout: 30
+    idle_timeout: 120
+    max_header_bytes: 1048576
+  grpc:
+    port: 8081
+    connection_timeout: 10
+    keepalive_timeout: 30
+
+# Database configuration
+database:
+  host: localhost
+  port: 5432
+  name: aegisshield_ml_pipeline
+  username: postgres
+  password: postgres
+  ssl_mode: disable
+  max_open_connections: 25
+  max_idle_connections: 25
+  connection_max_lifetime: 300
+  migrations_path: ./migrations
+
+# Redis configuration for caching and session storage
+redis:
+  host: localhost
+  port: 6379
+  password: ""
+  database: 0
+  max_retries: 3
+  dial_timeout: 5
+  read_timeout: 3
+  write_timeout: 3
+  pool_size: 10
+  pool_timeout: 30
+
+# Kafka configuration for event streaming
+kafka:
+  brokers:
+    - localhost:9092
+  consumer_group: ml-pipeline-consumer
+  topics:
+    training_events: ml.training.events
+    prediction_events: ml.prediction.events
+    model_events: ml.model.events
+    monitoring_events: ml.monitoring.events
+  producer:
+    max_message_bytes: 1000000
+    required_acks: 1
+    timeout: 10
+  consumer:
+    session_timeout: 30
+    heartbeat_interval: 3
+    max_processing_time: 300
+
+# Machine Learning configuration
+ml:
+  # Model training configuration
+  training:
+    # Worker pool settings
+    max_workers: 4
+    queue_size: 100
+    job_timeout: 3600  # 1 hour
+    
+    # Training algorithms and their default parameters
+    algorithms:
+      xgboost:
+        enabled: true
+        default_params:
+          max_depth: 6
+          learning_rate: 0.1
+          n_estimators: 100
+          objective: binary:logistic
+          eval_metric: logloss
+      random_forest:
+        enabled: true
+        default_params:
+          n_estimators: 100
+          max_depth: 10
+          min_samples_split: 2
+          min_samples_leaf: 1
+      neural_network:
+        enabled: true
+        default_params:
+          hidden_layers: [100, 50]
+          activation: relu
+          learning_rate: 0.001
+          epochs: 100
+          batch_size: 32
+      lstm:
+        enabled: true
+        default_params:
+          sequence_length: 30
+          hidden_size: 50
+          num_layers: 2
+          dropout: 0.2
+          learning_rate: 0.001
+          epochs: 100
+          batch_size: 32
+
+  # Model inference configuration
+  inference:
+    # Worker pool settings
+    max_workers: 8
+    queue_size: 1000
+    request_timeout: 30
+    
+    # Caching configuration
+    cache:
+      enabled: true
+      ttl: 300  # 5 minutes
+      max_size: 10000
+    
+    # Load balancing and scaling
+    load_balancing:
+      enabled: true
+      strategy: round_robin  # round_robin, least_connections, weighted
+    
+    # Rate limiting
+    rate_limiting:
+      enabled: true
+      requests_per_second: 1000
+      burst_size: 100
+
+  # Model monitoring configuration
+  model_monitoring:
+    # Monitoring intervals
+    metrics_collection_interval: 300  # 5 minutes
+    health_check_interval: 60        # 1 minute
+    
+    # Performance monitoring
+    performance_monitoring:
+      enabled: true
+      metrics_retention_days: 30
+      alert_thresholds:
+        accuracy_drop: 0.05      # Alert if accuracy drops by 5%
+        latency_increase: 2.0    # Alert if latency increases by 2x
+        error_rate_increase: 0.1 # Alert if error rate increases by 10%
+    
+    # Data drift detection
+    drift_detection:
+      enabled: true
+      check_interval: 3600        # 1 hour
+      drift_method: ks           # ks, psi, jensen_shannon
+      drift_threshold: 0.05
+      reference_window_days: 7
+      detection_window_days: 1
+      min_samples: 100
+    
+    # Alerting configuration
+    alerting:
+      enabled: true
+      channels:
+        - email
+        - slack
+        - webhook
+      
+      # Email alerting
+      email:
+        enabled: true
+        smtp_host: smtp.gmail.com
+        smtp_port: 587
+        username: alerts@aegisshield.com
+        password: ${SMTP_PASSWORD}
+        recipients:
+          - ml-team@aegisshield.com
+          - devops@aegisshield.com
+      
+      # Slack alerting
+      slack:
+        enabled: true
+        webhook_url: ${SLACK_WEBHOOK_URL}
+        channel: "#ml-alerts"
+        username: AegisShield ML Monitor
+      
+      # Webhook alerting
+      webhook:
+        enabled: true
+        url: ${WEBHOOK_URL}
+        timeout: 10
+        retry_attempts: 3
+
+  # A/B testing configuration
+  ab_testing:
+    enabled: true
+    default_traffic_split: 0.1  # 10% to new model
+    min_sample_size: 1000
+    significance_level: 0.05
+    test_duration_days: 7
+    auto_promotion:
+      enabled: true
+      confidence_threshold: 0.95
+      improvement_threshold: 0.02  # 2% improvement required
+
+  # Feature store configuration
+  feature_store:
+    enabled: true
+    storage:
+      type: postgresql  # postgresql, redis, s3
+      batch_size: 1000
+      cache_ttl: 3600
+    
+    # Feature validation
+    validation:
+      enabled: true
+      schema_validation: true
+      data_quality_checks: true
+      drift_detection: true
+    
+    # Feature serving
+    serving:
+      cache_enabled: true
+      cache_size: 100000
+      precompute_features: true
+
+# Logging configuration
+logging:
+  level: info  # debug, info, warn, error
+  format: json # json, text
+  output: stdout # stdout, file
+  file_path: /var/log/ml-pipeline.log
+  max_size: 100
+  max_backups: 3
+  max_age: 28
+  compress: true
+
+# Metrics and observability
+metrics:
+  enabled: true
+  # Prometheus metrics endpoint
+  prometheus:
+    enabled: true
+    endpoint: /metrics
+    port: 8082
+  
+  # Custom metrics
+  custom_metrics:
+    - name: model_predictions_total
+      type: counter
+      description: Total number of predictions made
+    - name: model_training_duration_seconds
+      type: histogram
+      description: Time taken to train models
+    - name: model_accuracy_score
+      type: gauge
+      description: Current model accuracy score
+
+# Security configuration
+security:
+  # API authentication
+  api_auth:
+    enabled: true
+    type: jwt  # jwt, api_key, oauth2
+    jwt_secret: ${JWT_SECRET}
+    jwt_expiry: 3600  # 1 hour
+  
+  # TLS configuration
+  tls:
+    enabled: false
+    cert_file: /etc/ssl/certs/server.crt
+    key_file: /etc/ssl/private/server.key
+  
+  # Rate limiting
+  rate_limiting:
+    enabled: true
+    requests_per_minute: 1000
+    burst_size: 100
+
+# External services
+external_services:
+  # Model registry (MLflow, etc.)
+  model_registry:
+    enabled: false
+    type: mlflow
+    tracking_uri: http://localhost:5000
+  
+  # Experiment tracking
+  experiment_tracking:
+    enabled: false
+    type: wandb
+    project: aegisshield-ml-pipeline
+    api_key: ${WANDB_API_KEY}
+
+# Development and testing
+development:
+  # Debug settings
+  debug:
+    enabled: true
+    profiling: true
+    profiling_port: 6060
+  
+  # Mock services for testing
+  mock_services:
+    enabled: false
+    mock_training: false
+    mock_inference: false
+
+# Data pipeline configuration
+data_pipeline:
+  # Input data sources
+  sources:
+    - type: kafka
+      topic: transaction.events
+      format: json
+    - type: database
+      connection: main
+      table: transactions
+  
+  # Data preprocessing
+  preprocessing:
+    batch_size: 1000
+    workers: 4
+    validation:
+      enabled: true
+      rules:
+        - field: amount
+          type: numeric
+          min: 0
+        - field: timestamp
+          type: datetime
+          required: true
+  
+  # Feature engineering
+  feature_engineering:
+    enabled: true
+    transformations:
+      - type: scaling
+        method: standard
+      - type: encoding
+        method: one_hot
+      - type: aggregation
+        window: 24h

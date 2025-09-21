@@ -1,0 +1,671 @@
+syntax = "proto3";
+
+package aegisshield.graph;
+
+option go_package = "aegisshield/shared/proto/graph-engine";
+
+import "google/protobuf/timestamp.proto";
+import "shared/proto/shared.proto";
+
+// Graph Engine Service - T022
+// Constitutional Principle: Graph-based Analytics & Visual Narrative
+
+service GraphEngineService {
+  // Graph Querying
+  rpc ExecuteQuery(ExecuteQueryRequest) returns (ExecuteQueryResponse);
+  rpc ExecuteQueryStream(ExecuteQueryRequest) returns (stream QueryResultChunk);
+  rpc ExecuteBatchQueries(ExecuteBatchQueriesRequest) returns (ExecuteBatchQueriesResponse);
+  
+  // Graph Analytics
+  rpc AnalyzeNetwork(AnalyzeNetworkRequest) returns (AnalyzeNetworkResponse);
+  rpc AnalyzeCentrality(AnalyzeCentralityRequest) returns (AnalyzeCentralityResponse);
+  rpc DetectCommunities(DetectCommunitiesRequest) returns (DetectCommunitiesResponse);
+  rpc FindShortestPath(FindShortestPathRequest) returns (FindShortestPathResponse);
+  rpc AnalyzeSubgraph(AnalyzeSubgraphRequest) returns (AnalyzeSubgraphResponse);
+  
+  // Pattern Detection
+  rpc DetectSuspiciousPatterns(DetectSuspiciousPatternsRequest) returns (DetectSuspiciousPatternsResponse);
+  rpc FindTransactionChains(FindTransactionChainsRequest) returns (FindTransactionChainsResponse);
+  rpc AnalyzeMoneyFlow(AnalyzeMoneyFlowRequest) returns (AnalyzeMoneyFlowResponse);
+  
+  // Graph Management
+  rpc CreateNode(CreateNodeRequest) returns (CreateNodeResponse);
+  rpc UpdateNode(UpdateNodeRequest) returns (UpdateNodeResponse);
+  rpc DeleteNode(DeleteNodeRequest) returns (DeleteNodeResponse);
+  rpc CreateRelationship(CreateRelationshipRequest) returns (CreateRelationshipResponse);
+  rpc UpdateRelationship(UpdateRelationshipRequest) returns (UpdateRelationshipResponse);
+  rpc DeleteRelationship(DeleteRelationshipRequest) returns (DeleteRelationshipResponse);
+  
+  // Graph Index Management
+  rpc CreateIndex(CreateIndexRequest) returns (CreateIndexResponse);
+  rpc DropIndex(DropIndexRequest) returns (DropIndexResponse);
+  rpc ListIndexes(ListIndexesRequest) returns (ListIndexesResponse);
+  rpc RebuildIndex(RebuildIndexRequest) returns (RebuildIndexResponse);
+  
+  // Graph Statistics
+  rpc GetGraphStatistics(GetGraphStatisticsRequest) returns (GetGraphStatisticsResponse);
+  rpc GetNodeStatistics(GetNodeStatisticsRequest) returns (GetNodeStatisticsResponse);
+  rpc GetRelationshipStatistics(GetRelationshipStatisticsRequest) returns (GetRelationshipStatisticsResponse);
+  
+  // Graph Visualization
+  rpc GetSubgraphForVisualization(GetSubgraphVisualizationRequest) returns (GetSubgraphVisualizationResponse);
+  rpc GetGraphLayoutData(GetGraphLayoutDataRequest) returns (GetGraphLayoutDataResponse);
+  
+  // Health Check
+  rpc HealthCheck(HealthCheckRequest) returns (HealthCheckResponse);
+}
+
+// Query Messages
+message ExecuteQueryRequest {
+  string query = 1;
+  QueryLanguage query_language = 2;
+  map<string, QueryParameter> parameters = 3;
+  QueryOptions options = 4;
+  string query_id = 5;
+}
+
+enum QueryLanguage {
+  QUERY_LANGUAGE_UNSPECIFIED = 0;
+  CYPHER = 1;
+  GREMLIN = 2;
+  SPARQL = 3;
+  GRAPHQL = 4;
+  CUSTOM_DSL = 5;
+}
+
+message QueryParameter {
+  ParameterType type = 1;
+  string string_value = 2;
+  int64 int_value = 3;
+  double double_value = 4;
+  bool bool_value = 5;
+  repeated string array_value = 6;
+}
+
+enum ParameterType {
+  PARAMETER_TYPE_UNSPECIFIED = 0;
+  STRING = 1;
+  INTEGER = 2;
+  DOUBLE = 3;
+  BOOLEAN = 4;
+  ARRAY = 5;
+  OBJECT = 6;
+}
+
+message QueryOptions {
+  int32 limit = 1;
+  int32 timeout_seconds = 2;
+  bool explain_plan = 3;
+  bool include_statistics = 4;
+  bool streaming = 5;
+  int32 chunk_size = 6;
+}
+
+message ExecuteQueryResponse {
+  string query_id = 1;
+  repeated QueryResult results = 2;
+  QueryStatistics statistics = 3;
+  string execution_plan = 4;
+  repeated shared.Error errors = 5;
+  google.protobuf.Timestamp executed_at = 6;
+}
+
+message QueryResult {
+  ResultType result_type = 1;
+  Node node = 2;
+  Relationship relationship = 3;
+  Path path = 4;
+  map<string, string> properties = 5;
+  int64 count = 6;
+}
+
+enum ResultType {
+  RESULT_TYPE_UNSPECIFIED = 0;
+  NODE = 1;
+  RELATIONSHIP = 2;
+  PATH = 3;
+  PROPERTIES = 4;
+  COUNT = 5;
+  SCALAR = 6;
+}
+
+message Node {
+  string id = 1;
+  repeated string labels = 2;
+  map<string, string> properties = 3;
+  int32 degree = 4;
+  double centrality_score = 5;
+}
+
+message Relationship {
+  string id = 1;
+  string source_node_id = 2;
+  string target_node_id = 3;
+  string type = 4;
+  map<string, string> properties = 5;
+  double weight = 6;
+  RelationshipDirection direction = 7;
+}
+
+enum RelationshipDirection {
+  RELATIONSHIP_DIRECTION_UNSPECIFIED = 0;
+  INCOMING = 1;
+  OUTGOING = 2;
+  UNDIRECTED = 3;
+}
+
+message Path {
+  repeated string node_ids = 1;
+  repeated string relationship_ids = 2;
+  int32 length = 3;
+  double weight = 4;
+  PathType path_type = 5;
+}
+
+enum PathType {
+  PATH_TYPE_UNSPECIFIED = 0;
+  SHORTEST_PATH = 1;
+  ALL_PATHS = 2;
+  WEIGHTED_PATH = 3;
+  TRANSACTION_CHAIN = 4;
+}
+
+message QueryStatistics {
+  double execution_time_ms = 1;
+  int32 nodes_scanned = 2;
+  int32 relationships_scanned = 3;
+  int32 results_returned = 4;
+  int32 index_hits = 5;
+  int32 cache_hits = 6;
+  string query_plan = 7;
+}
+
+message QueryResultChunk {
+  string query_id = 1;
+  int32 chunk_number = 2;
+  repeated QueryResult results = 3;
+  bool is_final_chunk = 4;
+}
+
+// Network Analysis Messages
+message AnalyzeNetworkRequest {
+  NetworkAnalysisType analysis_type = 1;
+  SubgraphFilter filter = 2;
+  AnalysisParameters parameters = 3;
+  string analysis_id = 4;
+}
+
+enum NetworkAnalysisType {
+  NETWORK_ANALYSIS_TYPE_UNSPECIFIED = 0;
+  CONNECTED_COMPONENTS = 1;
+  STRONGLY_CONNECTED_COMPONENTS = 2;
+  WEAKLY_CONNECTED_COMPONENTS = 3;
+  CLUSTERING_COEFFICIENT = 4;
+  NETWORK_DENSITY = 5;
+  SMALL_WORLD_ANALYSIS = 6;
+  SCALE_FREE_ANALYSIS = 7;
+}
+
+message SubgraphFilter {
+  repeated string node_labels = 1;
+  repeated string relationship_types = 2;
+  map<string, string> node_properties = 3;
+  map<string, string> relationship_properties = 4;
+  int32 max_depth = 5;
+  shared.TimeRange time_range = 6;
+}
+
+message AnalysisParameters {
+  double threshold = 1;
+  int32 max_iterations = 2;
+  double convergence_tolerance = 3;
+  bool weighted_analysis = 4;
+  map<string, string> custom_parameters = 5;
+}
+
+message AnalyzeNetworkResponse {
+  string analysis_id = 1;
+  NetworkAnalysisResult result = 2;
+  AnalysisStatistics statistics = 3;
+  google.protobuf.Timestamp analyzed_at = 4;
+}
+
+message NetworkAnalysisResult {
+  NetworkAnalysisType analysis_type = 1;
+  repeated Component components = 2;
+  NetworkMetrics metrics = 3;
+  repeated AnomalyDetection anomalies = 4;
+}
+
+message Component {
+  string component_id = 1;
+  repeated string node_ids = 2;
+  int32 size = 3;
+  double density = 4;
+  ComponentType component_type = 5;
+}
+
+enum ComponentType {
+  COMPONENT_TYPE_UNSPECIFIED = 0;
+  CONNECTED_COMPONENT = 1;
+  STRONGLY_CONNECTED = 2;
+  WEAKLY_CONNECTED = 3;
+  CLUSTER = 4;
+  COMMUNITY = 5;
+}
+
+message NetworkMetrics {
+  double network_density = 1;
+  double average_clustering = 2;
+  double average_path_length = 3;
+  int32 diameter = 4;
+  int32 radius = 5;
+  double modularity = 6;
+  int32 total_nodes = 7;
+  int32 total_relationships = 8;
+}
+
+message AnomalyDetection {
+  AnomalyType anomaly_type = 1;
+  repeated string affected_nodes = 2;
+  double anomaly_score = 3;
+  string description = 4;
+  map<string, string> details = 5;
+}
+
+enum AnomalyType {
+  ANOMALY_TYPE_UNSPECIFIED = 0;
+  STRUCTURAL_ANOMALY = 1;
+  BEHAVIORAL_ANOMALY = 2;
+  STATISTICAL_OUTLIER = 3;
+  PATTERN_ANOMALY = 4;
+  TEMPORAL_ANOMALY = 5;
+}
+
+// Centrality Analysis Messages
+message AnalyzeCentralityRequest {
+  CentralityType centrality_type = 1;
+  SubgraphFilter filter = 2;
+  CentralityParameters parameters = 3;
+  int32 top_k = 4;
+}
+
+enum CentralityType {
+  CENTRALITY_TYPE_UNSPECIFIED = 0;
+  DEGREE_CENTRALITY = 1;
+  BETWEENNESS_CENTRALITY = 2;
+  CLOSENESS_CENTRALITY = 3;
+  EIGENVECTOR_CENTRALITY = 4;
+  PAGERANK = 5;
+  KATZ_CENTRALITY = 6;
+  HARMONIC_CENTRALITY = 7;
+}
+
+message CentralityParameters {
+  double damping_factor = 1;
+  int32 max_iterations = 2;
+  double tolerance = 3;
+  bool normalized = 4;
+  bool weighted = 5;
+}
+
+message AnalyzeCentralityResponse {
+  CentralityType centrality_type = 1;
+  repeated CentralityScore scores = 2;
+  CentralityStatistics statistics = 3;
+  double computation_time_ms = 4;
+}
+
+message CentralityScore {
+  string node_id = 1;
+  double score = 2;
+  int32 rank = 3;
+  map<string, string> node_properties = 4;
+}
+
+message CentralityStatistics {
+  double mean_score = 1;
+  double std_deviation = 2;
+  double max_score = 3;
+  double min_score = 4;
+  int32 nodes_analyzed = 5;
+}
+
+// Pattern Detection Messages
+message DetectSuspiciousPatternsRequest {
+  repeated PatternType pattern_types = 1;
+  SubgraphFilter filter = 2;
+  PatternParameters parameters = 3;
+  shared.TimeRange time_range = 4;
+}
+
+enum PatternType {
+  PATTERN_TYPE_UNSPECIFIED = 0;
+  LAYERING_PATTERN = 1;
+  SMURFING_PATTERN = 2;
+  ROUND_TRIPPING = 3;
+  STRUCTURING = 4;
+  RAPID_MOVEMENT = 5;
+  FAN_OUT_PATTERN = 6;
+  FAN_IN_PATTERN = 7;
+  CIRCULAR_TRADING = 8;
+  SHELL_COMPANY_NETWORK = 9;
+  BENEFICIAL_OWNERSHIP_HIDING = 10;
+}
+
+message PatternParameters {
+  double confidence_threshold = 1;
+  int32 min_transaction_count = 2;
+  double min_total_amount = 3;
+  int32 max_pattern_depth = 4;
+  shared.TimeRange pattern_window = 5;
+}
+
+message DetectSuspiciousPatternsResponse {
+  repeated SuspiciousPattern patterns = 1;
+  PatternStatistics statistics = 2;
+  google.protobuf.Timestamp analyzed_at = 3;
+}
+
+message SuspiciousPattern {
+  string pattern_id = 1;
+  PatternType pattern_type = 2;
+  double confidence_score = 3;
+  repeated string involved_entities = 4;
+  repeated string involved_transactions = 5;
+  string description = 6;
+  PatternMetrics metrics = 7;
+  shared.TimeRange time_span = 8;
+  map<string, string> pattern_data = 9;
+}
+
+message PatternMetrics {
+  int32 entity_count = 1;
+  int32 transaction_count = 2;
+  double total_amount = 3;
+  int32 pattern_depth = 4;
+  double velocity = 5;
+  int32 unique_countries = 6;
+  int32 unique_currencies = 7;
+}
+
+// Money Flow Analysis Messages
+message AnalyzeMoneyFlowRequest {
+  string source_entity_id = 1;
+  MoneyFlowParameters parameters = 2;
+  SubgraphFilter filter = 3;
+  bool include_visualization_data = 4;
+}
+
+message MoneyFlowParameters {
+  int32 max_hops = 1;
+  double min_amount_threshold = 2;
+  shared.TimeRange time_range = 3;
+  shared.CurrencyCode currency = 4;
+  bool aggregate_flows = 5;
+  FlowDirection direction = 6;
+}
+
+enum FlowDirection {
+  FLOW_DIRECTION_UNSPECIFIED = 0;
+  INCOMING = 1;
+  OUTGOING = 2;
+  BIDIRECTIONAL = 3;
+}
+
+message AnalyzeMoneyFlowResponse {
+  string source_entity_id = 1;
+  repeated MoneyFlow flows = 2;
+  FlowStatistics statistics = 3;
+  FlowVisualizationData visualization_data = 4;
+}
+
+message MoneyFlow {
+  string flow_id = 1;
+  repeated string path_entities = 2;
+  repeated string path_transactions = 3;
+  double total_amount = 4;
+  shared.CurrencyCode currency = 5;
+  int32 hop_count = 6;
+  shared.TimeRange time_span = 7;
+  FlowRiskAssessment risk_assessment = 8;
+}
+
+message FlowRiskAssessment {
+  shared.RiskLevel risk_level = 1;
+  double risk_score = 2;
+  repeated string risk_factors = 3;
+  string assessment_notes = 4;
+}
+
+message FlowStatistics {
+  int32 total_flows = 1;
+  double total_amount = 2;
+  double average_flow_amount = 3;
+  int32 max_hops = 4;
+  double average_hops = 5;
+  repeated CurrencyFlow currency_breakdown = 6;
+}
+
+message CurrencyFlow {
+  shared.CurrencyCode currency = 1;
+  double amount = 2;
+  int32 flow_count = 3;
+  double percentage = 4;
+}
+
+// Graph Management Messages
+message CreateNodeRequest {
+  repeated string labels = 1;
+  map<string, string> properties = 2;
+  string created_by = 3;
+}
+
+message CreateNodeResponse {
+  string node_id = 1;
+  bool success = 2;
+  string message = 3;
+}
+
+message CreateRelationshipRequest {
+  string source_node_id = 1;
+  string target_node_id = 2;
+  string relationship_type = 3;
+  map<string, string> properties = 4;
+  string created_by = 5;
+}
+
+message CreateRelationshipResponse {
+  string relationship_id = 1;
+  bool success = 2;
+  string message = 3;
+}
+
+// Index Management Messages
+message CreateIndexRequest {
+  string index_name = 1;
+  IndexType index_type = 2;
+  repeated string labels = 3;
+  repeated string properties = 4;
+  IndexOptions options = 5;
+}
+
+enum IndexType {
+  INDEX_TYPE_UNSPECIFIED = 0;
+  BTREE = 1;
+  FULLTEXT = 2;
+  RANGE = 3;
+  POINT = 4;
+  COMPOSITE = 5;
+  UNIQUE = 6;
+}
+
+message IndexOptions {
+  bool unique = 1;
+  bool case_sensitive = 2;
+  string analyzer = 3;
+  map<string, string> configuration = 4;
+}
+
+message CreateIndexResponse {
+  string index_name = 1;
+  bool success = 2;
+  string message = 3;
+  double creation_time_ms = 4;
+}
+
+// Graph Statistics Messages
+message GetGraphStatisticsRequest {
+  bool include_detailed_stats = 1;
+  shared.TimeRange time_range = 2;
+}
+
+message GetGraphStatisticsResponse {
+  GraphStatistics statistics = 1;
+  google.protobuf.Timestamp generated_at = 2;
+}
+
+message GraphStatistics {
+  int64 total_nodes = 1;
+  int64 total_relationships = 2;
+  repeated LabelStatistic label_statistics = 3;
+  repeated RelationshipTypeStatistic relationship_type_statistics = 4;
+  double average_degree = 5;
+  int32 max_degree = 6;
+  int32 connected_components = 7;
+  double clustering_coefficient = 8;
+  DatabasePerformance performance = 9;
+}
+
+message LabelStatistic {
+  string label = 1;
+  int64 count = 2;
+  double percentage = 3;
+}
+
+message RelationshipTypeStatistic {
+  string type = 1;
+  int64 count = 2;
+  double percentage = 3;
+}
+
+message DatabasePerformance {
+  double query_performance_ms = 1;
+  int64 cache_hit_ratio = 2;
+  int64 memory_usage_mb = 3;
+  int64 storage_size_mb = 4;
+}
+
+// Graph Visualization Messages
+message GetSubgraphVisualizationRequest {
+  string root_node_id = 1;
+  int32 max_depth = 2;
+  int32 max_nodes = 3;
+  SubgraphFilter filter = 4;
+  LayoutAlgorithm layout_algorithm = 5;
+}
+
+enum LayoutAlgorithm {
+  LAYOUT_ALGORITHM_UNSPECIFIED = 0;
+  FORCE_DIRECTED = 1;
+  HIERARCHICAL = 2;
+  CIRCULAR = 3;
+  GRID = 4;
+  TREE = 5;
+  RADIAL = 6;
+}
+
+message GetSubgraphVisualizationResponse {
+  repeated VisualizationNode nodes = 1;
+  repeated VisualizationRelationship relationships = 2;
+  LayoutData layout = 3;
+  VisualizationMetadata metadata = 4;
+}
+
+message VisualizationNode {
+  string id = 1;
+  repeated string labels = 2;
+  map<string, string> properties = 3;
+  double x = 4;
+  double y = 5;
+  double size = 6;
+  string color = 7;
+  NodeShape shape = 8;
+}
+
+enum NodeShape {
+  NODE_SHAPE_UNSPECIFIED = 0;
+  CIRCLE = 1;
+  SQUARE = 2;
+  TRIANGLE = 3;
+  DIAMOND = 4;
+  HEXAGON = 5;
+}
+
+message VisualizationRelationship {
+  string id = 1;
+  string source_id = 2;
+  string target_id = 3;
+  string type = 4;
+  map<string, string> properties = 5;
+  double width = 6;
+  string color = 7;
+  RelationshipStyle style = 8;
+}
+
+enum RelationshipStyle {
+  RELATIONSHIP_STYLE_UNSPECIFIED = 0;
+  SOLID = 1;
+  DASHED = 2;
+  DOTTED = 3;
+  CURVED = 4;
+}
+
+message LayoutData {
+  LayoutAlgorithm algorithm = 1;
+  double width = 2;
+  double height = 3;
+  map<string, string> parameters = 4;
+}
+
+message VisualizationMetadata {
+  int32 total_nodes = 1;
+  int32 total_relationships = 2;
+  int32 max_depth_reached = 3;
+  bool truncated = 4;
+  string root_node_id = 5;
+}
+
+// Analysis Statistics Messages
+message AnalysisStatistics {
+  double computation_time_ms = 1;
+  int32 nodes_analyzed = 2;
+  int32 relationships_analyzed = 3;
+  int32 patterns_found = 4;
+  MemoryUsage memory_usage = 5;
+}
+
+message MemoryUsage {
+  int64 peak_memory_mb = 1;
+  int64 current_memory_mb = 2;
+  int64 gc_count = 3;
+}
+
+// Health Check Messages
+message HealthCheckRequest {
+  string service = 1;
+}
+
+message HealthCheckResponse {
+  HealthStatus status = 1;
+  string message = 2;
+  map<string, string> details = 3;
+  google.protobuf.Timestamp timestamp = 4;
+}
+
+enum HealthStatus {
+  HEALTH_STATUS_UNSPECIFIED = 0;
+  HEALTHY = 1;
+  DEGRADED = 2;
+  UNHEALTHY = 3;
+}

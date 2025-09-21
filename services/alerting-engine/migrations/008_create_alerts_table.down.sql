@@ -1,0 +1,20 @@
+-- Drop alerts table
+DROP TRIGGER IF EXISTS update_alerts_updated_at ON alerts;
+DROP INDEX IF EXISTS idx_alerts_tags;
+DROP INDEX IF EXISTS idx_alerts_metadata;
+DROP INDEX IF EXISTS idx_alerts_event_data;
+DROP INDEX IF EXISTS idx_alerts_escalation_created;
+DROP INDEX IF EXISTS idx_alerts_rule_status;
+DROP INDEX IF EXISTS idx_alerts_status_created_at;
+DROP INDEX IF EXISTS idx_alerts_status_severity;
+DROP INDEX IF EXISTS idx_alerts_created_by;
+DROP INDEX IF EXISTS idx_alerts_correlation_id;
+DROP INDEX IF EXISTS idx_alerts_escalation_level;
+DROP INDEX IF EXISTS idx_alerts_updated_at;
+DROP INDEX IF EXISTS idx_alerts_created_at;
+DROP INDEX IF EXISTS idx_alerts_source;
+DROP INDEX IF EXISTS idx_alerts_type;
+DROP INDEX IF EXISTS idx_alerts_status;
+DROP INDEX IF EXISTS idx_alerts_severity;
+DROP INDEX IF EXISTS idx_alerts_rule_id;
+DROP TABLE IF EXISTS alerts;

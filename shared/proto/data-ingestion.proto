@@ -1,0 +1,227 @@
+syntax = "proto3";
+
+package aegisshield.data_ingestion;
+
+option go_package = "aegisshield/shared/proto/data-ingestion";
+
+import "google/protobuf/timestamp.proto";
+import "shared/proto/shared.proto";
+
+// Data Ingestion Service - T019
+// Constitutional Principle: Data Integrity & Scalability
+
+service DataIngestionService {
+  // File-based ingestion
+  rpc UploadFile(FileUploadRequest) returns (FileUploadResponse);
+  rpc UploadFileStream(stream FileChunkRequest) returns (FileUploadResponse);
+  
+  // Real-time streaming ingestion
+  rpc ProcessTransactionStream(stream TransactionRecord) returns (TransactionStreamResponse);
+  
+  // Job management
+  rpc GetJobStatus(JobStatusRequest) returns (JobStatusResponse);
+  rpc ListJobs(ListJobsRequest) returns (ListJobsResponse);
+  rpc CancelJob(CancelJobRequest) returns (CancelJobResponse);
+  
+  // Data validation
+  rpc ValidateData(ValidateDataRequest) returns (ValidateDataResponse);
+  
+  // Health check
+  rpc HealthCheck(HealthCheckRequest) returns (HealthCheckResponse);
+}
+
+// Data Types supported for ingestion
+enum DataType {
+  DATA_TYPE_UNSPECIFIED = 0;
+  CUSTOMER_DATA = 1;
+  TRANSACTION_DATA = 2;
+  ACCOUNT_DATA = 3;
+  KYC_DATA = 4;
+  SANCTIONS_LIST = 5;
+  PEP_LIST = 6;
+  CORRESPONDENT_BANK_DATA = 7;
+  SWIFT_MESSAGE = 8;
+  REGULATORY_REPORT = 9;
+  RISK_ASSESSMENT = 10;
+}
+
+// File Upload Messages
+message FileUploadRequest {
+  string file_name = 1;
+  bytes file_content = 2;
+  DataType data_type = 3;
+  map<string, string> metadata = 4;
+  string checksum = 5;
+  int64 file_size = 6;
+  string encoding = 7;
+  bool validate_on_upload = 8;
+}
+
+message FileChunkRequest {
+  string file_name = 1;
+  bytes chunk = 2;
+  int32 chunk_number = 3;
+  bool is_last = 4;
+  DataType data_type = 5;
+  map<string, string> metadata = 6;
+}
+
+message FileUploadResponse {
+  string job_id = 1;
+  shared.JobStatus status = 2;
+  string message = 3;
+  repeated shared.Error validation_errors = 4;
+  int32 records_count = 5;
+  double estimated_processing_time_seconds = 6;
+  google.protobuf.Timestamp created_at = 7;
+}
+
+// Streaming Messages
+message TransactionRecord {
+  string id = 1;
+  double amount = 2;
+  string currency = 3;
+  string from = 4;
+  string to = 5;
+  int64 timestamp = 6;
+  PaymentType payment_type = 7;
+  map<string, string> metadata = 8;
+  string correlation_id = 9;
+}
+
+enum PaymentType {
+  PAYMENT_TYPE_UNSPECIFIED = 0;
+  DOMESTIC_WIRE = 1;
+  INTERNATIONAL_WIRE = 2;
+  ACH_CREDIT = 3;
+  ACH_DEBIT = 4;
+  CASH_DEPOSIT = 5;
+  CASH_WITHDRAWAL = 6;
+  CHECK_DEPOSIT = 7;
+  CARD_PAYMENT = 8;
+  CRYPTO_TRANSFER = 9;
+}
+
+message TransactionStreamResponse {
+  int32 processed_count = 1;
+  int32 failed_count = 2;
+  int32 alerts_generated = 3;
+  repeated shared.Error processing_errors = 4;
+  double processing_time_ms = 5;
+}
+
+// Job Management Messages
+message JobStatusRequest {
+  string job_id = 1;
+}
+
+message JobStatusResponse {
+  shared.JobInfo job_info = 1;
+  ProcessingStatistics statistics = 2;
+}
+
+message ProcessingStatistics {
+  int32 total_records = 1;
+  int32 processed_records = 2;
+  int32 failed_records = 3;
+  int32 duplicate_records = 4;
+  int32 validation_errors = 5;
+  double processing_rate_per_second = 6;
+  google.protobuf.Timestamp started_at = 7;
+  google.protobuf.Timestamp estimated_completion = 8;
+}
+
+message ListJobsRequest {
+  shared.Pagination pagination = 1;
+  JobFilter filter = 2;
+}
+
+message JobFilter {
+  repeated shared.JobStatus statuses = 1;
+  repeated DataType data_types = 2;
+  shared.TimeRange time_range = 3;
+  string created_by = 4;
+}
+
+message ListJobsResponse {
+  repeated shared.JobInfo jobs = 1;
+  int32 total_count = 2;
+  bool has_next_page = 3;
+}
+
+message CancelJobRequest {
+  string job_id = 1;
+  string reason = 2;
+  string cancelled_by = 3;
+}
+
+message CancelJobResponse {
+  bool success = 1;
+  string message = 2;
+  shared.JobInfo job_info = 3;
+}
+
+// Data Validation Messages
+message ValidateDataRequest {
+  bytes data = 1;
+  DataType data_type = 2;
+  ValidationRules rules = 3;
+  bool strict_mode = 4;
+}
+
+message ValidationRules {
+  bool check_required_fields = 1;
+  bool validate_data_types = 2;
+  bool check_referential_integrity = 3;
+  bool validate_business_rules = 4;
+  repeated string custom_rules = 5;
+}
+
+message ValidateDataResponse {
+  bool is_valid = 1;
+  repeated ValidationError errors = 2;
+  repeated ValidationWarning warnings = 3;
+  ValidationStatistics statistics = 4;
+}
+
+message ValidationError {
+  string field = 1;
+  string error_code = 2;
+  string message = 3;
+  int32 line_number = 4;
+  string suggested_fix = 5;
+}
+
+message ValidationWarning {
+  string field = 1;
+  string warning_code = 2;
+  string message = 3;
+  int32 line_number = 4;
+}
+
+message ValidationStatistics {
+  int32 total_records = 1;
+  int32 valid_records = 2;
+  int32 invalid_records = 3;
+  int32 warnings_count = 4;
+  double validation_time_ms = 5;
+}
+
+// Health Check Messages
+message HealthCheckRequest {
+  string service = 1;
+}
+
+message HealthCheckResponse {
+  HealthStatus status = 1;
+  string message = 2;
+  map<string, string> details = 3;
+  google.protobuf.Timestamp timestamp = 4;
+}
+
+enum HealthStatus {
+  HEALTH_STATUS_UNSPECIFIED = 0;
+  HEALTHY = 1;
+  DEGRADED = 2;
+  UNHEALTHY = 3;
+}

@@ -1,0 +1,19 @@
+apiVersion: v2
+name: aegisshield
+description: A Helm chart for AegisShield Financial Crime Investigation Platform
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+keywords:
+  - financial-crime
+  - investigation
+  - compliance
+  - anti-money-laundering
+home: https://github.com/aegisshield/platform
+sources:
+  - https://github.com/aegisshield/platform
+maintainers:
+  - name: AegisShield Team
+    email: team@aegisshield.com
+dependencies: []
+kubeVersion: ">=1.24.0"

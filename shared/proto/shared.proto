@@ -1,0 +1,233 @@
+syntax = "proto3";
+
+package aegisshield.shared;
+
+option go_package = "aegisshield/shared/proto/shared";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/struct.proto";
+
+// Common data types and enums used across all services
+// Constitutional Principle: Modular Code - Shared definitions prevent duplication
+
+// Entity Types
+enum EntityType {
+  ENTITY_TYPE_UNSPECIFIED = 0;
+  PERSON = 1;
+  ORGANIZATION = 2;
+  ACCOUNT = 3;
+  TRANSACTION = 4;
+  ADDRESS = 5;
+  PHONE = 6;
+  EMAIL = 7;
+  DOCUMENT = 8;
+}
+
+// Risk Levels
+enum RiskLevel {
+  RISK_LEVEL_UNSPECIFIED = 0;
+  LOW = 1;
+  MEDIUM = 2;
+  HIGH = 3;
+  CRITICAL = 4;
+}
+
+// Countries (ISO 3166-1 alpha-2 codes for high-risk jurisdictions)
+enum CountryCode {
+  COUNTRY_CODE_UNSPECIFIED = 0;
+  US = 1;
+  GB = 2;
+  CH = 3;  // Switzerland
+  LU = 4;  // Luxembourg
+  RU = 5;  // Russia
+  CN = 6;  // China
+  IR = 7;  // Iran
+  KP = 8;  // North Korea
+  AF = 9;  // Afghanistan
+  MM = 10; // Myanmar
+}
+
+// Currency Codes (ISO 4217)
+enum CurrencyCode {
+  CURRENCY_CODE_UNSPECIFIED = 0;
+  USD = 1;
+  EUR = 2;
+  GBP = 3;
+  CHF = 4;
+  RUB = 5;
+  CNY = 6;
+  JPY = 7;
+  CAD = 8;
+  AUD = 9;
+  BTC = 100; // Cryptocurrency
+  ETH = 101;
+  XMR = 102; // Monero - privacy coin
+}
+
+// Data Sources
+enum DataSource {
+  DATA_SOURCE_UNSPECIFIED = 0;
+  SWIFT_NETWORK = 1;
+  BANKING_CORE = 2;
+  CRM_SYSTEM = 3;
+  KYC_SYSTEM = 4;
+  AML_SYSTEM = 5;
+  EXTERNAL_DATABASE = 6;
+  MANUAL_ENTRY = 7;
+  API_INTEGRATION = 8;
+  FILE_UPLOAD = 9;
+  STREAMING_SOURCE = 10;
+}
+
+// Common Entity representation
+message Entity {
+  string entity_id = 1;
+  EntityType entity_type = 2;
+  string name = 3;
+  map<string, string> attributes = 4;
+  double risk_score = 5;
+  RiskLevel risk_level = 6;
+  DataSource source_system = 7;
+  double confidence_score = 8;
+  google.protobuf.Timestamp created_at = 9;
+  google.protobuf.Timestamp updated_at = 10;
+  repeated string flags = 11;
+  string created_by = 12;
+  string updated_by = 13;
+}
+
+// Common Address representation
+message Address {
+  string address_id = 1;
+  string street_address = 2;
+  string city = 3;
+  string state_province = 4;
+  string postal_code = 5;
+  CountryCode country = 6;
+  string formatted_address = 7;
+  double latitude = 8;
+  double longitude = 9;
+  bool is_verified = 10;
+  google.protobuf.Timestamp verified_at = 11;
+}
+
+// Common Contact Information
+message ContactInfo {
+  repeated string emails = 1;
+  repeated string phones = 2;
+  repeated Address addresses = 3;
+  string preferred_contact_method = 4;
+}
+
+// Common Transaction representation
+message Transaction {
+  string transaction_id = 1;
+  double amount = 2;
+  CurrencyCode currency = 3;
+  string sender_entity_id = 4;
+  string receiver_entity_id = 5;
+  google.protobuf.Timestamp timestamp = 6;
+  PaymentMethod payment_method = 7;
+  TransactionStatus status = 8;
+  string reference_number = 9;
+  string description = 10;
+  map<string, string> metadata = 11;
+  repeated string risk_flags = 12;
+  double risk_score = 13;
+}
+
+// Payment Methods
+enum PaymentMethod {
+  PAYMENT_METHOD_UNSPECIFIED = 0;
+  WIRE_TRANSFER = 1;
+  ACH = 2;
+  CHECK = 3;
+  CASH = 4;
+  CREDIT_CARD = 5;
+  DEBIT_CARD = 6;
+  CRYPTOCURRENCY = 7;
+  MONEY_ORDER = 8;
+  TRAVELER_CHECK = 9;
+  PREPAID_CARD = 10;
+  MOBILE_PAYMENT = 11;
+  DIGITAL_WALLET = 12;
+}
+
+// Transaction Status
+enum TransactionStatus {
+  TRANSACTION_STATUS_UNSPECIFIED = 0;
+  PENDING = 1;
+  COMPLETED = 2;
+  FAILED = 3;
+  CANCELLED = 4;
+  FLAGGED = 5;
+  UNDER_REVIEW = 6;
+  APPROVED = 7;
+  REJECTED = 8;
+}
+
+// Common pagination
+message Pagination {
+  int32 page = 1;
+  int32 page_size = 2;
+  string sort_by = 3;
+  SortOrder sort_order = 4;
+}
+
+enum SortOrder {
+  SORT_ORDER_UNSPECIFIED = 0;
+  ASCENDING = 1;
+  DESCENDING = 2;
+}
+
+// Common time range
+message TimeRange {
+  google.protobuf.Timestamp start_time = 1;
+  google.protobuf.Timestamp end_time = 2;
+}
+
+// Common error handling
+message Error {
+  string code = 1;
+  string message = 2;
+  string details = 3;
+  google.protobuf.Timestamp timestamp = 4;
+}
+
+// Job status for async operations
+enum JobStatus {
+  JOB_STATUS_UNSPECIFIED = 0;
+  ACCEPTED = 1;
+  QUEUED = 2;
+  PROCESSING = 3;
+  COMPLETED = 4;
+  FAILED = 5;
+  CANCELLED = 6;
+  RETRYING = 7;
+}
+
+message JobInfo {
+  string job_id = 1;
+  JobStatus status = 2;
+  string message = 3;
+  double progress_percentage = 4;
+  google.protobuf.Timestamp created_at = 5;
+  google.protobuf.Timestamp updated_at = 6;
+  google.protobuf.Timestamp completed_at = 7;
+  map<string, string> metadata = 8;
+  repeated Error errors = 9;
+}
+
+// Audit trail for compliance
+message AuditRecord {
+  string audit_id = 1;
+  string entity_id = 2;
+  string action = 3;
+  string actor = 4;
+  google.protobuf.Timestamp timestamp = 5;
+  google.protobuf.Struct before_state = 6;
+  google.protobuf.Struct after_state = 7;
+  string reason = 8;
+  string ip_address = 9;
+  string user_agent = 10;
+}

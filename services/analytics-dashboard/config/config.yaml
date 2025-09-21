@@ -1,0 +1,180 @@
+environment: development
+
+server:
+  http:
+    port: 8080
+    read_timeout: 30
+    write_timeout: 30
+    idle_timeout: 120
+    max_header_bytes: 1048576
+  websocket:
+    port: 8081
+    read_buffer_size: 1024
+    write_buffer_size: 1024
+    check_origin: false
+    enable_compression: true
+
+database:
+  host: localhost
+  port: 5432
+  name: aegis_analytics
+  username: postgres
+  password: postgres
+  ssl_mode: disable
+  max_open_connections: 25
+  max_idle_connections: 25
+  connection_max_lifetime: 300
+  migrations_path: "./migrations"
+
+redis:
+  host: localhost
+  port: 6379
+  password: ""
+  database: 0
+  max_retries: 3
+  dial_timeout: 5
+  read_timeout: 3
+  write_timeout: 3
+  pool_size: 10
+  pool_timeout: 30
+
+kafka:
+  brokers:
+    - localhost:9092
+  consumer_group: analytics-dashboard-service
+  topics:
+    metrics_events: metrics.events
+    alert_events: alert.events
+    transaction_events: transaction.events
+    user_events: user.events
+  producer:
+    max_message_bytes: 1000000
+    required_acks: 1
+    timeout: 30
+  consumer:
+    session_timeout: 30
+    heartbeat_interval: 3
+    max_processing_time: 60
+
+analytics:
+  dashboard:
+    default_refresh_interval: 30
+    max_widgets_per_dashboard: 20
+    default_time_range: "24h"
+    supported_time_ranges:
+      - "1h"
+      - "6h"
+      - "24h"
+      - "7d"
+      - "30d"
+    max_data_points: 1000
+  
+  data_sources:
+    transaction_db:
+      enabled: true
+      url: "postgres://postgres:postgres@localhost:5432/aegis_transactions"
+      timeout: 30
+      max_retries: 3
+    graph_db:
+      enabled: true
+      url: "bolt://localhost:7687"
+      timeout: 30
+      max_retries: 3
+    alert_engine:
+      enabled: true
+      url: "http://localhost:8082"
+      timeout: 30
+      max_retries: 3
+    ml_pipeline:
+      enabled: true
+      url: "http://localhost:8083"
+      timeout: 30
+      max_retries: 3
+    compliance_engine:
+      enabled: true
+      url: "http://localhost:8084"
+      timeout: 30
+      max_retries: 3
+
+  real_time:
+    enabled: true
+    update_interval: 5
+    max_connections: 1000
+    buffer_size: 100
+    compression_level: 6
+
+  visualization:
+    charts:
+      default_type: "line"
+      max_series_count: 10
+      animation_enabled: true
+      tooltip_enabled: true
+    maps:
+      default_provider: "openstreetmap"
+      max_markers: 1000
+      clustering_enabled: true
+    tables:
+      default_page_size: 25
+      max_page_size: 100
+      sorting_enabled: true
+      filtering_enabled: true
+
+  kpi:
+    refresh_interval: 60
+    alert_thresholds:
+      transaction_volume_spike: 2.0
+      alert_rate_increase: 1.5
+      response_time_degradation: 3.0
+      error_rate_increase: 2.0
+    trend_analysis:
+      enabled: true
+      lookback_period: 168  # 7 days in hours
+      min_data_points: 10
+    benchmarking:
+      enabled: true
+      comparison_periods:
+        - "1d"
+        - "7d"
+        - "30d"
+
+  export:
+    enabled: true
+    max_export_size: 10000
+    supported_formats:
+      - "csv"
+      - "json"
+      - "xlsx"
+      - "pdf"
+    retention_days: 30
+
+logging:
+  level: debug
+  format: json
+  output: stdout
+  file_path: "/var/log/analytics-dashboard.log"
+  max_size: 100
+  max_backups: 3
+  max_age: 28
+  compress: true
+
+metrics:
+  enabled: true
+  prometheus:
+    enabled: true
+    endpoint: "/metrics"
+    port: 9090
+
+security:
+  api_auth:
+    enabled: true
+    type: "jwt"
+    jwt_secret: "your-secret-key-change-in-production"
+    jwt_expiry: 3600
+  tls:
+    enabled: false
+    cert_file: ""
+    key_file: ""
+  rate_limiting:
+    enabled: true
+    requests_per_minute: 1000
+    burst_size: 100

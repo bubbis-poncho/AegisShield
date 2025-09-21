@@ -1,0 +1,360 @@
+syntax = "proto3";
+
+package aegisshield.entity_resolution;
+
+option go_package = "aegisshield/shared/proto/entity-resolution";
+
+import "google/protobuf/timestamp.proto";
+import "shared/proto/shared.proto";
+
+// Entity Resolution Service - T020
+// Constitutional Principle: Data Integrity & Modular Code
+
+service EntityResolutionService {
+  // Core entity resolution
+  rpc ResolveEntity(ResolveEntityRequest) returns (ResolveEntityResponse);
+  rpc BatchResolveEntities(BatchResolveRequest) returns (BatchResolveResponse);
+  
+  // Entity linking and relationship discovery
+  rpc LinkEntities(LinkEntitiesRequest) returns (LinkEntitiesResponse);
+  rpc FindSimilarEntities(FindSimilarEntitiesRequest) returns (FindSimilarEntitiesResponse);
+  
+  // Duplicate detection and management
+  rpc DetectDuplicates(DetectDuplicatesRequest) returns (DetectDuplicatesResponse);
+  rpc MergeDuplicates(MergeDuplicatesRequest) returns (MergeDuplicatesResponse);
+  
+  // Fuzzy matching and search
+  rpc FuzzyMatch(FuzzyMatchRequest) returns (FuzzyMatchResponse);
+  rpc SearchEntities(SearchEntitiesRequest) returns (SearchEntitiesResponse);
+  
+  // Graph integration
+  rpc UpdateGraph(UpdateGraphRequest) returns (UpdateGraphResponse);
+  
+  // Configuration and maintenance
+  rpc UpdateMatchingRules(UpdateMatchingRulesRequest) returns (UpdateMatchingRulesResponse);
+  rpc GetMatchingStatistics(GetMatchingStatisticsRequest) returns (GetMatchingStatisticsResponse);
+  
+  // Health check
+  rpc HealthCheck(HealthCheckRequest) returns (HealthCheckResponse);
+}
+
+// Entity Resolution Messages
+message ResolveEntityRequest {
+  shared.EntityType entity_type = 1;
+  map<string, string> attributes = 2;
+  double match_threshold = 3;
+  repeated string source_systems = 4;
+  ConflictResolution conflict_resolution = 5;
+  bool create_if_not_found = 6;
+  string resolved_by = 7;
+}
+
+message ConflictResolution {
+  ConflictStrategy strategy = 1;
+  repeated string merge_priority = 2;
+  bool require_manual_review = 3;
+}
+
+enum ConflictStrategy {
+  CONFLICT_STRATEGY_UNSPECIFIED = 0;
+  MERGE_BY_CONFIDENCE = 1;
+  MERGE_BY_RECENCY = 2;
+  MERGE_BY_SOURCE_PRIORITY = 3;
+  REQUIRE_MANUAL_RESOLUTION = 4;
+}
+
+message ResolveEntityResponse {
+  string entity_id = 1;
+  double confidence_score = 2;
+  repeated MatchedRecord matched_records = 3;
+  repeated RelatedEntity related_entities = 4;
+  int32 conflicts_detected = 5;
+  ConflictResolutionResult conflict_resolution = 6;
+  google.protobuf.Timestamp resolved_at = 7;
+}
+
+message MatchedRecord {
+  string record_id = 1;
+  string source_system = 2;
+  double match_score = 3;
+  map<string, string> attributes = 4;
+  MatchReason match_reason = 5;
+  google.protobuf.Timestamp last_updated = 6;
+}
+
+message MatchReason {
+  repeated string matching_fields = 1;
+  MatchAlgorithm algorithm_used = 2;
+  double similarity_score = 3;
+  string explanation = 4;
+}
+
+enum MatchAlgorithm {
+  MATCH_ALGORITHM_UNSPECIFIED = 0;
+  EXACT_MATCH = 1;
+  LEVENSHTEIN_DISTANCE = 2;
+  JARO_WINKLER = 3;
+  LEVENSHTEIN_JARO_WINKLER = 4;
+  SOUNDEX = 5;
+  METAPHONE = 6;
+  DOUBLE_METAPHONE = 7;
+  COSINE_SIMILARITY = 8;
+  JACCARD_SIMILARITY = 9;
+}
+
+message RelatedEntity {
+  string entity_id = 1;
+  RelationshipType relationship_type = 2;
+  double relationship_strength = 3;
+  map<string, string> relationship_attributes = 4;
+}
+
+enum RelationshipType {
+  RELATIONSHIP_TYPE_UNSPECIFIED = 0;
+  SUBSIDIARY = 1;
+  PARENT_COMPANY = 2;
+  AFFILIATE = 3;
+  BENEFICIAL_OWNER = 4;
+  AUTHORIZED_SIGNATORY = 5;
+  SPOUSE = 6;
+  FAMILY_MEMBER = 7;
+  BUSINESS_PARTNER = 8;
+  SAME_ADDRESS = 9;
+  SAME_PHONE = 10;
+  SAME_EMAIL = 11;
+}
+
+message ConflictResolutionResult {
+  ConflictStrategy strategy = 1;
+  repeated ConflictDetail conflicts = 2;
+  bool manual_review_required = 3;
+  string resolution_notes = 4;
+}
+
+message ConflictDetail {
+  string field_name = 1;
+  repeated ConflictingValue conflicting_values = 2;
+  string resolved_value = 3;
+  string resolution_reason = 4;
+}
+
+message ConflictingValue {
+  string value = 1;
+  string source_system = 2;
+  double confidence = 3;
+  google.protobuf.Timestamp last_updated = 4;
+}
+
+// Batch Processing Messages
+message BatchResolveRequest {
+  repeated ResolveEntityRequest requests = 1;
+  bool parallel_processing = 2;
+  int32 batch_size = 3;
+  string batch_id = 4;
+}
+
+message BatchResolveResponse {
+  string batch_id = 1;
+  repeated ResolveEntityResponse results = 2;
+  int32 total_processed = 3;
+  int32 successful_resolutions = 4;
+  int32 failed_resolutions = 5;
+  double processing_time_ms = 6;
+  repeated shared.Error errors = 7;
+}
+
+// Entity Linking Messages
+message LinkEntitiesRequest {
+  string source_entity_id = 1;
+  TransactionPattern transaction_pattern = 2;
+  double linking_threshold = 3;
+  int32 max_results = 4;
+  shared.TimeRange time_window = 5;
+}
+
+message TransactionPattern {
+  double min_amount = 1;
+  double max_amount = 2;
+  string time_window = 3;
+  FrequencyType frequency = 4;
+  repeated shared.PaymentMethod payment_methods = 5;
+}
+
+enum FrequencyType {
+  FREQUENCY_TYPE_UNSPECIFIED = 0;
+  ONE_TIME = 1;
+  RECURRING = 2;
+  FREQUENT = 3;
+  SPORADIC = 4;
+}
+
+message LinkEntitiesResponse {
+  repeated EntityLink linked_entities = 1;
+  int32 total_links_found = 2;
+  LinkingStatistics statistics = 3;
+}
+
+message EntityLink {
+  string target_entity_id = 1;
+  LinkType link_type = 2;
+  double link_strength = 3;
+  repeated string supporting_transactions = 4;
+  string explanation = 5;
+  google.protobuf.Timestamp discovered_at = 6;
+}
+
+enum LinkType {
+  LINK_TYPE_UNSPECIFIED = 0;
+  FINANCIAL_RELATIONSHIP = 1;
+  BUSINESS_RELATIONSHIP = 2;
+  OWNERSHIP_RELATIONSHIP = 3;
+  CONTROL_RELATIONSHIP = 4;
+  TRANSACTIONAL_RELATIONSHIP = 5;
+}
+
+message LinkingStatistics {
+  int32 entities_analyzed = 1;
+  int32 transactions_analyzed = 2;
+  double average_link_strength = 3;
+  int32 high_confidence_links = 4;
+  double analysis_time_ms = 5;
+}
+
+// Duplicate Detection Messages
+message DetectDuplicatesRequest {
+  repeated string source_systems = 1;
+  shared.EntityType entity_type = 2;
+  DeduplicationRules dedupe_rules = 3;
+  int32 max_groups = 4;
+}
+
+message DeduplicationRules {
+  repeated string exact_match_fields = 1;
+  repeated string fuzzy_match_fields = 2;
+  double similarity_threshold = 3;
+  MatchAlgorithm algorithm = 4;
+  bool cross_system_only = 5;
+}
+
+message DetectDuplicatesResponse {
+  repeated DuplicateGroup duplicate_groups = 1;
+  int32 total_duplicates_found = 2;
+  DeduplicationStatistics statistics = 3;
+}
+
+message DuplicateGroup {
+  string group_id = 1;
+  repeated shared.Entity entities = 2;
+  double similarity_score = 3;
+  repeated string matching_fields = 4;
+  DuplicateType duplicate_type = 5;
+  string merge_recommendation = 6;
+}
+
+enum DuplicateType {
+  DUPLICATE_TYPE_UNSPECIFIED = 0;
+  EXACT_DUPLICATE = 1;
+  FUZZY_DUPLICATE = 2;
+  CROSS_SYSTEM_DUPLICATE = 3;
+  POTENTIAL_DUPLICATE = 4;
+}
+
+message DeduplicationStatistics {
+  int32 entities_analyzed = 1;
+  int32 duplicate_groups_found = 2;
+  int32 exact_duplicates = 3;
+  int32 fuzzy_duplicates = 4;
+  double analysis_time_ms = 5;
+}
+
+// Fuzzy Matching Messages
+message FuzzyMatchRequest {
+  string query = 1;
+  shared.EntityType entity_type = 2;
+  MatchAlgorithm match_algorithm = 3;
+  double threshold = 4;
+  int32 max_results = 5;
+  repeated string search_fields = 6;
+}
+
+message FuzzyMatchResponse {
+  repeated FuzzyMatch matches = 1;
+  string query_processed = 2;
+  MatchAlgorithm algorithm_used = 3;
+  double search_time_ms = 4;
+}
+
+message FuzzyMatch {
+  shared.Entity entity = 1;
+  double confidence_score = 2;
+  repeated FieldMatch field_matches = 3;
+  string match_explanation = 4;
+}
+
+message FieldMatch {
+  string field_name = 1;
+  string original_value = 2;
+  string matched_value = 3;
+  double similarity_score = 4;
+}
+
+// Graph Integration Messages
+message UpdateGraphRequest {
+  string entity_id = 1;
+  repeated GraphUpdate graph_updates = 2;
+  bool validate_before_update = 3;
+}
+
+message GraphUpdate {
+  GraphUpdateType update_type = 1;
+  NodeData node_data = 2;
+  RelationshipData relationship_data = 3;
+}
+
+enum GraphUpdateType {
+  GRAPH_UPDATE_TYPE_UNSPECIFIED = 0;
+  CREATE_NODE = 1;
+  UPDATE_NODE = 2;
+  DELETE_NODE = 3;
+  CREATE_RELATIONSHIP = 4;
+  UPDATE_RELATIONSHIP = 5;
+  DELETE_RELATIONSHIP = 6;
+}
+
+message NodeData {
+  repeated string labels = 1;
+  map<string, string> properties = 2;
+}
+
+message RelationshipData {
+  string from_entity_id = 1;
+  string to_entity_id = 2;
+  string relation_type = 3;
+  map<string, string> properties = 4;
+}
+
+message UpdateGraphResponse {
+  bool success = 1;
+  int32 updates_applied = 2;
+  string graph_version = 3;
+  repeated shared.Error errors = 4;
+}
+
+// Health Check Messages
+message HealthCheckRequest {
+  string service = 1;
+}
+
+message HealthCheckResponse {
+  HealthStatus status = 1;
+  string message = 2;
+  map<string, string> details = 3;
+  google.protobuf.Timestamp timestamp = 4;
+}
+
+enum HealthStatus {
+  HEALTH_STATUS_UNSPECIFIED = 0;
+  HEALTHY = 1;
+  DEGRADED = 2;
+  UNHEALTHY = 3;
+}

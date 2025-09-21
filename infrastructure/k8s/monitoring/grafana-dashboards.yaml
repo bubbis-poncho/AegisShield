@@ -1,0 +1,393 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboards
+  namespace: monitoring
+data:
+  aegisshield-overview.json: |
+    {
+      "dashboard": {
+        "id": null,
+        "title": "AegisShield Platform Overview",
+        "tags": ["aegisshield", "overview"],
+        "timezone": "browser",
+        "panels": [
+          {
+            "id": 1,
+            "title": "System Health",
+            "type": "stat",
+            "targets": [
+              {
+                "expr": "up{job=~\"aegisshield.*\"}",
+                "legendFormat": "{{job}}"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "color": {
+                  "mode": "thresholds"
+                },
+                "thresholds": {
+                  "steps": [
+                    {"color": "red", "value": 0},
+                    {"color": "green", "value": 1}
+                  ]
+                }
+              }
+            },
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0}
+          },
+          {
+            "id": 2,
+            "title": "Request Rate",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "sum(rate(http_requests_total{job=~\"aegisshield.*\"}[5m])) by (job)",
+                "legendFormat": "{{job}}"
+              }
+            ],
+            "yAxes": [
+              {"label": "Requests/sec", "unit": "reqps"}
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0}
+          },
+          {
+            "id": 3,
+            "title": "Error Rate",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "sum(rate(http_requests_total{job=~\"aegisshield.*\",status=~\"5..\"}[5m])) by (job) / sum(rate(http_requests_total{job=~\"aegisshield.*\"}[5m])) by (job)",
+                "legendFormat": "{{job}}"
+              }
+            ],
+            "yAxes": [
+              {"label": "Error Rate", "unit": "percentunit"}
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8}
+          },
+          {
+            "id": 4,
+            "title": "Response Time (95th percentile)",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{job=~\"aegisshield.*\"}[5m])) by (job, le))",
+                "legendFormat": "{{job}}"
+              }
+            ],
+            "yAxes": [
+              {"label": "Response Time", "unit": "s"}
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8}
+          },
+          {
+            "id": 5,
+            "title": "Data Ingestion Queue",
+            "type": "stat",
+            "targets": [
+              {
+                "expr": "aegisshield_data_ingestion_queue_size",
+                "legendFormat": "Queue Size"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "color": {
+                  "mode": "thresholds"
+                },
+                "thresholds": {
+                  "steps": [
+                    {"color": "green", "value": 0},
+                    {"color": "yellow", "value": 1000},
+                    {"color": "red", "value": 10000}
+                  ]
+                }
+              }
+            },
+            "gridPos": {"h": 4, "w": 6, "x": 0, "y": 16}
+          },
+          {
+            "id": 6,
+            "title": "Active Investigations",
+            "type": "stat",
+            "targets": [
+              {
+                "expr": "aegisshield_active_investigations_total",
+                "legendFormat": "Active"
+              }
+            ],
+            "gridPos": {"h": 4, "w": 6, "x": 6, "y": 16}
+          },
+          {
+            "id": 7,
+            "title": "High Value Transactions (Last Hour)",
+            "type": "stat",
+            "targets": [
+              {
+                "expr": "increase(aegisshield_high_value_transactions_total[1h])",
+                "legendFormat": "Count"
+              }
+            ],
+            "gridPos": {"h": 4, "w": 6, "x": 12, "y": 16}
+          },
+          {
+            "id": 8,
+            "title": "Alerts Generated (Last Hour)",
+            "type": "stat",
+            "targets": [
+              {
+                "expr": "increase(aegisshield_alerts_generated_total[1h])",
+                "legendFormat": "Count"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "color": {
+                  "mode": "thresholds"
+                },
+                "thresholds": {
+                  "steps": [
+                    {"color": "green", "value": 0},
+                    {"color": "yellow", "value": 100},
+                    {"color": "red", "value": 500}
+                  ]
+                }
+              }
+            },
+            "gridPos": {"h": 4, "w": 6, "x": 18, "y": 16}
+          }
+        ],
+        "time": {
+          "from": "now-1h",
+          "to": "now"
+        },
+        "refresh": "30s"
+      }
+    }
+    
+  aegisshield-performance.json: |
+    {
+      "dashboard": {
+        "id": null,
+        "title": "AegisShield Performance Metrics",
+        "tags": ["aegisshield", "performance"],
+        "timezone": "browser",
+        "panels": [
+          {
+            "id": 1,
+            "title": "CPU Usage by Service",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "rate(container_cpu_usage_seconds_total{pod=~\"aegisshield.*\"}[5m]) * 100",
+                "legendFormat": "{{pod}}"
+              }
+            ],
+            "yAxes": [
+              {"label": "CPU %", "unit": "percent"}
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0}
+          },
+          {
+            "id": 2,
+            "title": "Memory Usage by Service",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "container_memory_usage_bytes{pod=~\"aegisshield.*\"} / 1024 / 1024",
+                "legendFormat": "{{pod}}"
+              }
+            ],
+            "yAxes": [
+              {"label": "Memory", "unit": "MB"}
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0}
+          },
+          {
+            "id": 3,
+            "title": "Database Connections",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "pg_stat_database_numbackends",
+                "legendFormat": "PostgreSQL"
+              },
+              {
+                "expr": "neo4j_database_system_active_connections",
+                "legendFormat": "Neo4j"
+              }
+            ],
+            "yAxes": [
+              {"label": "Connections", "unit": "short"}
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8}
+          },
+          {
+            "id": 4,
+            "title": "Database Query Performance",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "rate(pg_stat_database_tup_returned[5m])",
+                "legendFormat": "PostgreSQL Rows/sec"
+              },
+              {
+                "expr": "rate(neo4j_database_system_query_execution_latency_millis_count[5m])",
+                "legendFormat": "Neo4j Queries/sec"
+              }
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8}
+          },
+          {
+            "id": 5,
+            "title": "Kafka Consumer Lag",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "kafka_consumer_lag_sum",
+                "legendFormat": "{{consumer_group}}"
+              }
+            ],
+            "yAxes": [
+              {"label": "Messages", "unit": "short"}
+            ],
+            "gridPos": {"h": 8, "w": 24, "x": 0, "y": 16}
+          }
+        ],
+        "time": {
+          "from": "now-6h",
+          "to": "now"
+        },
+        "refresh": "1m"
+      }
+    }
+    
+  aegisshield-business.json: |
+    {
+      "dashboard": {
+        "id": null,
+        "title": "AegisShield Business Metrics",
+        "tags": ["aegisshield", "business"],
+        "timezone": "browser",
+        "panels": [
+          {
+            "id": 1,
+            "title": "Transaction Volume",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "rate(aegisshield_transactions_ingested_total[5m]) * 60",
+                "legendFormat": "Transactions/min"
+              }
+            ],
+            "yAxes": [
+              {"label": "Transactions", "unit": "short"}
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0}
+          },
+          {
+            "id": 2,
+            "title": "Transaction Value Distribution",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "histogram_quantile(0.5, rate(aegisshield_transaction_amount_bucket[5m]))",
+                "legendFormat": "Median"
+              },
+              {
+                "expr": "histogram_quantile(0.95, rate(aegisshield_transaction_amount_bucket[5m]))",
+                "legendFormat": "95th percentile"
+              },
+              {
+                "expr": "histogram_quantile(0.99, rate(aegisshield_transaction_amount_bucket[5m]))",
+                "legendFormat": "99th percentile"
+              }
+            ],
+            "yAxes": [
+              {"label": "Amount", "unit": "currencyUSD"}
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0}
+          },
+          {
+            "id": 3,
+            "title": "Alert Generation Rate",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "rate(aegisshield_alerts_generated_total[5m]) * 60",
+                "legendFormat": "{{alert_type}}"
+              }
+            ],
+            "yAxes": [
+              {"label": "Alerts/min", "unit": "short"}
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8}
+          },
+          {
+            "id": 4,
+            "title": "Investigation Status",
+            "type": "piechart",
+            "targets": [
+              {
+                "expr": "aegisshield_investigations_by_status",
+                "legendFormat": "{{status}}"
+              }
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8}
+          },
+          {
+            "id": 5,
+            "title": "Entity Resolution Performance",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "rate(aegisshield_entity_resolution_total[5m])",
+                "legendFormat": "Resolutions/sec"
+              },
+              {
+                "expr": "rate(aegisshield_entity_resolution_failures[5m])",
+                "legendFormat": "Failures/sec"
+              }
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16}
+          },
+          {
+            "id": 6,
+            "title": "Sanctions Screening Statistics",
+            "type": "stat",
+            "targets": [
+              {
+                "expr": "aegisshield_sanctions_matches_total",
+                "legendFormat": "Total Matches"
+              },
+              {
+                "expr": "rate(aegisshield_sanctions_screened_total[1h]) * 3600",
+                "legendFormat": "Screened/hour"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "color": {
+                  "mode": "thresholds"
+                },
+                "thresholds": {
+                  "steps": [
+                    {"color": "green", "value": 0},
+                    {"color": "yellow", "value": 10},
+                    {"color": "red", "value": 100}
+                  ]
+                }
+              }
+            },
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16}
+          }
+        ],
+        "time": {
+          "from": "now-24h",
+          "to": "now"
+        },
+        "refresh": "5m"
+      }
+    }

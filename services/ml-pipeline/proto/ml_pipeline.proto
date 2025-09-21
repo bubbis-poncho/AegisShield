@@ -1,0 +1,422 @@
+syntax = "proto3";
+
+package ml_pipeline;
+
+option go_package = "github.com/aegisshield/ml-pipeline/proto";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/struct.proto";
+
+// MLPipelineService provides machine learning pipeline operations
+service MLPipelineService {
+  // Model management
+  rpc CreateModel(CreateModelRequest) returns (CreateModelResponse);
+  rpc GetModel(GetModelRequest) returns (GetModelResponse);
+  rpc ListModels(ListModelsRequest) returns (ListModelsResponse);
+  rpc UpdateModel(UpdateModelRequest) returns (UpdateModelResponse);
+  rpc DeleteModel(DeleteModelRequest) returns (DeleteModelResponse);
+
+  // Training operations
+  rpc TrainModel(TrainModelRequest) returns (TrainModelResponse);
+  rpc GetTrainingStatus(GetTrainingStatusRequest) returns (GetTrainingStatusResponse);
+  rpc ListTrainingJobs(ListTrainingJobsRequest) returns (ListTrainingJobsResponse);
+  rpc StopTraining(StopTrainingRequest) returns (StopTrainingResponse);
+
+  // Deployment operations
+  rpc DeployModel(DeployModelRequest) returns (DeployModelResponse);
+  rpc GetDeployment(GetDeploymentRequest) returns (GetDeploymentResponse);
+  rpc ListDeployments(ListDeploymentsRequest) returns (ListDeploymentsResponse);
+  rpc UndeployModel(UndeployModelRequest) returns (UndeployModelResponse);
+
+  // Inference operations
+  rpc Predict(PredictRequest) returns (PredictResponse);
+  rpc BatchPredict(BatchPredictRequest) returns (BatchPredictResponse);
+  rpc GetPredictionHistory(GetPredictionHistoryRequest) returns (GetPredictionHistoryResponse);
+
+  // Monitoring operations
+  rpc GetModelMetrics(GetModelMetricsRequest) returns (GetModelMetricsResponse);
+  rpc GetModelHealth(GetModelHealthRequest) returns (GetModelHealthResponse);
+  rpc GetDriftStatus(GetDriftStatusRequest) returns (GetDriftStatusResponse);
+  rpc TriggerDriftDetection(TriggerDriftDetectionRequest) returns (TriggerDriftDetectionResponse);
+  rpc GetAlerts(GetAlertsRequest) returns (GetAlertsResponse);
+
+  // A/B Testing operations
+  rpc CreateABTest(CreateABTestRequest) returns (CreateABTestResponse);
+  rpc GetABTest(GetABTestRequest) returns (GetABTestResponse);
+  rpc ListABTests(ListABTestsRequest) returns (ListABTestsResponse);
+  rpc UpdateABTest(UpdateABTestRequest) returns (UpdateABTestResponse);
+
+  // Feature Store operations
+  rpc GetFeatures(GetFeaturesRequest) returns (GetFeaturesResponse);
+  rpc BatchGetFeatures(BatchGetFeaturesRequest) returns (BatchGetFeaturesResponse);
+}
+
+// Model messages
+message Model {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  string algorithm = 4;
+  google.protobuf.Struct parameters = 5;
+  string status = 6;
+  string version = 7;
+  int64 created_at = 8;
+  int64 updated_at = 9;
+}
+
+message CreateModelRequest {
+  string name = 1;
+  string description = 2;
+  string algorithm = 3;
+  google.protobuf.Struct parameters = 4;
+}
+
+message CreateModelResponse {
+  Model model = 1;
+}
+
+message GetModelRequest {
+  string model_id = 1;
+}
+
+message GetModelResponse {
+  Model model = 1;
+}
+
+message ListModelsRequest {
+  int32 page = 1;
+  int32 page_size = 2;
+  string filter = 3;
+}
+
+message ListModelsResponse {
+  repeated Model models = 1;
+  int32 total_count = 2;
+}
+
+message UpdateModelRequest {
+  string model_id = 1;
+  string name = 2;
+  string description = 3;
+  google.protobuf.Struct parameters = 4;
+}
+
+message UpdateModelResponse {
+  Model model = 1;
+}
+
+message DeleteModelRequest {
+  string model_id = 1;
+}
+
+message DeleteModelResponse {
+  bool success = 1;
+}
+
+// Training messages
+message TrainModelRequest {
+  string model_id = 1;
+  string dataset_path = 2;
+  google.protobuf.Struct parameters = 3;
+}
+
+message TrainModelResponse {
+  string job_id = 1;
+  string status = 2;
+  string message = 3;
+}
+
+message GetTrainingStatusRequest {
+  string job_id = 1;
+}
+
+message GetTrainingStatusResponse {
+  string job_id = 1;
+  string model_id = 2;
+  string status = 3;
+  float progress = 4;
+  string message = 5;
+  int64 created_at = 6;
+  int64 updated_at = 7;
+  int64 completed_at = 8;
+}
+
+message ListTrainingJobsRequest {
+  string model_id = 1;
+  int32 page = 2;
+  int32 page_size = 3;
+}
+
+message ListTrainingJobsResponse {
+  repeated GetTrainingStatusResponse jobs = 1;
+  int32 total_count = 2;
+}
+
+message StopTrainingRequest {
+  string job_id = 1;
+}
+
+message StopTrainingResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// Deployment messages
+message DeployModelRequest {
+  string model_id = 1;
+  string version = 2;
+  string environment = 3;
+  google.protobuf.Struct config = 4;
+}
+
+message DeployModelResponse {
+  string deployment_id = 1;
+  string status = 2;
+  string message = 3;
+}
+
+message GetDeploymentRequest {
+  string deployment_id = 1;
+}
+
+message GetDeploymentResponse {
+  string deployment_id = 1;
+  string model_id = 2;
+  string version = 3;
+  string environment = 4;
+  string status = 5;
+  google.protobuf.Struct config = 6;
+  int64 created_at = 7;
+  int64 updated_at = 8;
+}
+
+message ListDeploymentsRequest {
+  string model_id = 1;
+  string environment = 2;
+  int32 page = 3;
+  int32 page_size = 4;
+}
+
+message ListDeploymentsResponse {
+  repeated GetDeploymentResponse deployments = 1;
+  int32 total_count = 2;
+}
+
+message UndeployModelRequest {
+  string deployment_id = 1;
+}
+
+message UndeployModelResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// Prediction messages
+message PredictRequest {
+  string model_id = 1;
+  string version = 2;
+  map<string, google.protobuf.Value> features = 3;
+}
+
+message PredictResponse {
+  string prediction_id = 1;
+  string result = 2;
+  float confidence = 3;
+  string model_version = 4;
+  int64 timestamp = 5;
+}
+
+message FeatureMap {
+  map<string, google.protobuf.Value> features = 1;
+}
+
+message BatchPredictRequest {
+  string model_id = 1;
+  string version = 2;
+  repeated FeatureMap features = 3;
+}
+
+message PredictionResult {
+  string prediction_id = 1;
+  string result = 2;
+  float confidence = 3;
+  string model_version = 4;
+  int64 timestamp = 5;
+}
+
+message BatchPredictResponse {
+  repeated PredictionResult results = 1;
+}
+
+message GetPredictionHistoryRequest {
+  string model_id = 1;
+  int64 start_time = 2;
+  int64 end_time = 3;
+  int32 page = 4;
+  int32 page_size = 5;
+}
+
+message GetPredictionHistoryResponse {
+  repeated PredictionResult predictions = 1;
+  int32 total_count = 2;
+}
+
+// Monitoring messages
+message PerformanceMetrics {
+  float accuracy = 1;
+  float precision = 2;
+  float recall = 3;
+  float f1_score = 4;
+  float auc = 5;
+  float latency = 6;
+  float throughput = 7;
+  float error_rate = 8;
+}
+
+message GetModelMetricsRequest {
+  string model_id = 1;
+  int64 start_time = 2;
+  int64 end_time = 3;
+}
+
+message GetModelMetricsResponse {
+  string model_id = 1;
+  string model_name = 2;
+  int64 collected_at = 3;
+  PerformanceMetrics performance = 4;
+  float health = 5;
+}
+
+message GetModelHealthRequest {
+  string model_id = 1;
+}
+
+message GetModelHealthResponse {
+  string model_id = 1;
+  string status = 2;
+  float score = 3;
+  int64 checked_at = 4;
+  repeated string issues = 5;
+}
+
+message GetDriftStatusRequest {
+  string model_id = 1;
+}
+
+message GetDriftStatusResponse {
+  string model_id = 1;
+  bool has_drift = 2;
+  float drift_score = 3;
+  float threshold = 4;
+  int64 last_checked = 5;
+  repeated string affected_features = 6;
+}
+
+message TriggerDriftDetectionRequest {
+  string model_id = 1;
+}
+
+message TriggerDriftDetectionResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message Alert {
+  string id = 1;
+  string model_id = 2;
+  string type = 3;
+  string severity = 4;
+  string message = 5;
+  int64 timestamp = 6;
+  string status = 7;
+}
+
+message GetAlertsRequest {
+  string model_id = 1;
+  string severity = 2;
+  string status = 3;
+  int32 page = 4;
+  int32 page_size = 5;
+}
+
+message GetAlertsResponse {
+  repeated Alert alerts = 1;
+  int32 total_count = 2;
+}
+
+// A/B Testing messages
+message ABTest {
+  string id = 1;
+  string name = 2;
+  string model_a_id = 3;
+  string model_b_id = 4;
+  float traffic_split = 5;
+  string status = 6;
+  int64 start_time = 7;
+  int64 end_time = 8;
+  google.protobuf.Struct results = 9;
+}
+
+message CreateABTestRequest {
+  string name = 1;
+  string model_a_id = 2;
+  string model_b_id = 3;
+  float traffic_split = 4;
+  int64 duration_days = 5;
+}
+
+message CreateABTestResponse {
+  ABTest ab_test = 1;
+}
+
+message GetABTestRequest {
+  string test_id = 1;
+}
+
+message GetABTestResponse {
+  ABTest ab_test = 1;
+}
+
+message ListABTestsRequest {
+  string status = 1;
+  int32 page = 2;
+  int32 page_size = 3;
+}
+
+message ListABTestsResponse {
+  repeated ABTest ab_tests = 1;
+  int32 total_count = 2;
+}
+
+message UpdateABTestRequest {
+  string test_id = 1;
+  string status = 2;
+  float traffic_split = 3;
+}
+
+message UpdateABTestResponse {
+  ABTest ab_test = 1;
+}
+
+// Feature Store messages
+message GetFeaturesRequest {
+  string entity_id = 1;
+  repeated string feature_names = 2;
+  int64 timestamp = 3;
+}
+
+message GetFeaturesResponse {
+  string entity_id = 1;
+  map<string, google.protobuf.Value> features = 2;
+  int64 timestamp = 3;
+}
+
+message BatchGetFeaturesRequest {
+  repeated string entity_ids = 1;
+  repeated string feature_names = 2;
+  int64 timestamp = 3;
+}
+
+message BatchGetFeaturesResponse {
+  repeated GetFeaturesResponse feature_sets = 1;
+}

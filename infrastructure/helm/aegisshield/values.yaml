@@ -1,0 +1,308 @@
+# Default values for aegisshield
+# This is a YAML-formatted file.
+
+# Global configuration
+global:
+  imageRegistry: ""
+  imagePullSecrets: []
+  storageClass: ""
+
+# Image configuration
+image:
+  registry: docker.io
+  repository: aegisshield
+  pullPolicy: IfNotPresent
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: ""
+
+# Service account
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  name: "aegisshield-sa"
+
+# Security context
+podSecurityContext:
+  fsGroup: 2000
+
+securityContext:
+  capabilities:
+    drop:
+    - ALL
+  readOnlyRootFilesystem: true
+  runAsNonRoot: true
+  runAsUser: 1000
+
+# Ingress configuration
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+  hosts:
+    - host: app.aegisshield.local
+      paths:
+        - path: /
+          pathType: Prefix
+          service: frontend
+    - host: api.aegisshield.local
+      paths:
+        - path: /
+          pathType: Prefix
+          service: api-gateway
+  tls:
+    - secretName: aegisshield-tls
+      hosts:
+        - app.aegisshield.local
+        - api.aegisshield.local
+
+# Database configuration
+postgresql:
+  enabled: true
+  host: "postgresql"
+  port: 5432
+  database: "aegisshield"
+  username: "postgres"
+  existingSecret: "database-secrets"
+  secretKeys:
+    adminPasswordKey: "postgresql-password"
+
+neo4j:
+  enabled: true
+  host: "neo4j"
+  port: 7687
+  database: "neo4j"
+  existingSecret: "database-secrets"
+  secretKeys:
+    passwordKey: "neo4j-password"
+
+# Kafka configuration
+kafka:
+  enabled: true
+  brokers: "kafka:9092"
+  existingSecret: "kafka-secrets"
+
+# Services configuration
+services:
+  # Data Ingestion Service
+  dataIngestion:
+    enabled: true
+    replicaCount: 3
+    image:
+      repository: data-ingestion
+      tag: "latest"
+    service:
+      type: ClusterIP
+      port: 8060
+    resources:
+      limits:
+        cpu: 500m
+        memory: 512Mi
+      requests:
+        cpu: 100m
+        memory: 128Mi
+    autoscaling:
+      enabled: true
+      minReplicas: 2
+      maxReplicas: 10
+      targetCPUUtilizationPercentage: 70
+
+  # Entity Resolution Service  
+  entityResolution:
+    enabled: true
+    replicaCount: 2
+    image:
+      repository: entity-resolution
+      tag: "latest"
+    service:
+      type: ClusterIP
+      port: 8061
+    resources:
+      limits:
+        cpu: 1000m
+        memory: 1Gi
+      requests:
+        cpu: 200m
+        memory: 256Mi
+    autoscaling:
+      enabled: true
+      minReplicas: 1
+      maxReplicas: 8
+      targetCPUUtilizationPercentage: 70
+
+  # Alerting Engine Service
+  alertingEngine:
+    enabled: true
+    replicaCount: 3
+    image:
+      repository: alerting-engine
+      tag: "latest"
+    service:
+      type: ClusterIP
+      port: 8062
+    resources:
+      limits:
+        cpu: 500m
+        memory: 512Mi
+      requests:
+        cpu: 100m
+        memory: 128Mi
+    autoscaling:
+      enabled: true
+      minReplicas: 2
+      maxReplicas: 10
+      targetCPUUtilizationPercentage: 70
+
+  # Graph Engine Service
+  graphEngine:
+    enabled: true
+    replicaCount: 2
+    image:
+      repository: graph-engine
+      tag: "latest"
+    service:
+      type: ClusterIP
+      port: 8063
+    resources:
+      limits:
+        cpu: 1000m
+        memory: 1Gi
+      requests:
+        cpu: 200m
+        memory: 256Mi
+    autoscaling:
+      enabled: true
+      minReplicas: 1
+      maxReplicas: 6
+      targetCPUUtilizationPercentage: 70
+
+  # API Gateway
+  apiGateway:
+    enabled: true
+    replicaCount: 3
+    image:
+      repository: api-gateway
+      tag: "latest"
+    service:
+      type: LoadBalancer
+      port: 8080
+    resources:
+      limits:
+        cpu: 1000m
+        memory: 1Gi
+      requests:
+        cpu: 200m
+        memory: 256Mi
+    autoscaling:
+      enabled: true
+      minReplicas: 2
+      maxReplicas: 15
+      targetCPUUtilizationPercentage: 70
+
+  # Frontend
+  frontend:
+    enabled: true
+    replicaCount: 3
+    image:
+      repository: frontend
+      tag: "latest"
+    service:
+      type: LoadBalancer
+      port: 3000
+    resources:
+      limits:
+        cpu: 500m
+        memory: 512Mi
+      requests:
+        cpu: 100m
+        memory: 256Mi
+    autoscaling:
+      enabled: true
+      minReplicas: 2
+      maxReplicas: 10
+      targetCPUUtilizationPercentage: 70
+
+  # User Management Service
+  userManagement:
+    enabled: true
+    replicaCount: 2
+    image:
+      repository: user-management
+      tag: "latest"
+    service:
+      type: ClusterIP
+      port: 8070
+    resources:
+      limits:
+        cpu: 500m
+        memory: 512Mi
+      requests:
+        cpu: 100m
+        memory: 128Mi
+
+  # Batch Analysis Service
+  batchAnalysis:
+    enabled: true
+    replicaCount: 1
+    image:
+      repository: batch-analysis
+      tag: "latest"
+    service:
+      type: ClusterIP
+      port: 8080
+    resources:
+      limits:
+        cpu: 2000m
+        memory: 2Gi
+      requests:
+        cpu: 500m
+        memory: 512Mi
+
+  # Reporting Service
+  reporting:
+    enabled: true
+    replicaCount: 2
+    image:
+      repository: reporting
+      tag: "latest"
+    service:
+      type: ClusterIP
+      port: 8071
+    resources:
+      limits:
+        cpu: 1000m
+        memory: 1Gi
+      requests:
+        cpu: 200m
+        memory: 256Mi
+
+# Monitoring and observability
+monitoring:
+  enabled: true
+  prometheus:
+    enabled: true
+  grafana:
+    enabled: true
+  jaeger:
+    enabled: true
+
+# Node selector and tolerations
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+# Environment-specific configuration
+env:
+  name: "production"
+  logLevel: "info"
+  enableDebug: false
+
+# Backup configuration
+backup:
+  enabled: true
+  schedule: "0 2 * * *"  # Daily at 2 AM
+  retention: "7d"

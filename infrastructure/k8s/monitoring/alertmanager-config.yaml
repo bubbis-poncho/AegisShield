@@ -1,0 +1,206 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: alertmanager-config
+  namespace: monitoring
+data:
+  alertmanager.yml: |
+    global:
+      # Global configuration for Alertmanager
+      smtp_smarthost: 'smtp.company.com:587'
+      smtp_from: 'aegisshield-alerts@company.com'
+      smtp_auth_username: 'aegisshield-alerts@company.com'
+      smtp_auth_password: '${SMTP_PASSWORD}'
+    
+    # Templates for alert notifications
+    templates:
+      - '/etc/alertmanager/templates/*.tmpl'
+    
+    # Route tree for alert routing
+    route:
+      group_by: ['alertname', 'severity']
+      group_wait: 10s
+      group_interval: 10s
+      repeat_interval: 1h
+      receiver: 'default-receiver'
+      
+      routes:
+        # Critical alerts - immediate notification
+        - match:
+            severity: critical
+          receiver: 'critical-alerts'
+          group_wait: 5s
+          repeat_interval: 5m
+          
+        # Security alerts - immediate notification to security team
+        - match_re:
+            alertname: '(UnauthorizedAccess|SuspiciousActivity|DataRetentionPolicyViolation)'
+          receiver: 'security-team'
+          group_wait: 0s
+          repeat_interval: 15m
+          
+        # Compliance alerts - notify compliance team
+        - match_re:
+            alertname: '(ComplianceReporting|SanctionsScreening|DataRetention)'
+          receiver: 'compliance-team'
+          repeat_interval: 30m
+          
+        # Business hours only for non-critical alerts
+        - match:
+            severity: warning
+          receiver: 'business-hours-alerts'
+          active_time_intervals:
+            - business-hours
+          
+        # Infrastructure alerts
+        - match_re:
+            alertname: '(HighCPU|HighMemory|DiskSpace|PostgreSQL|Neo4j|Kafka)'
+          receiver: 'infrastructure-team'
+          
+    # Time intervals
+    time_intervals:
+      - name: business-hours
+        time_intervals:
+          - times:
+              - start_time: '09:00'
+                end_time: '17:00'
+            weekdays: ['monday:friday']
+            location: 'America/New_York'
+    
+    # Inhibition rules to suppress redundant alerts
+    inhibit_rules:
+      # Suppress warning alerts when critical alerts are firing
+      - source_matchers:
+          - severity = "critical"
+        target_matchers:
+          - severity = "warning"
+        equal: ['alertname', 'instance']
+        
+      # Suppress service alerts when the entire node is down
+      - source_matchers:
+          - alertname = "ServiceDown"
+        target_matchers:
+          - alertname =~ "(HighCPU|HighMemory|DiskSpace).*"
+        equal: ['instance']
+    
+    # Alert receivers and notification channels
+    receivers:
+      - name: 'default-receiver'
+        email_configs:
+          - to: 'platform-team@company.com'
+            subject: '[AegisShield] {{ .GroupLabels.alertname }} - {{ .GroupLabels.severity }}'
+            body: |
+              {{ range .Alerts }}
+              Alert: {{ .Annotations.summary }}
+              Description: {{ .Annotations.description }}
+              Severity: {{ .Labels.severity }}
+              Service: {{ .Labels.job }}
+              Time: {{ .StartsAt.Format "2006-01-02 15:04:05" }}
+              {{ end }}
+              
+      - name: 'critical-alerts'
+        email_configs:
+          - to: 'platform-team@company.com'
+            subject: '[CRITICAL] AegisShield Alert: {{ .GroupLabels.alertname }}'
+            body: |
+              🚨 CRITICAL ALERT 🚨
+              
+              {{ range .Alerts }}
+              Alert: {{ .Annotations.summary }}
+              Description: {{ .Annotations.description }}
+              Service: {{ .Labels.job }}
+              Time: {{ .StartsAt.Format "2006-01-02 15:04:05" }}
+              
+              This requires immediate attention!
+              {{ end }}
+        slack_configs:
+          - api_url: '${SLACK_WEBHOOK_URL}'
+            channel: '#aegisshield-critical'
+            title: '🚨 Critical AegisShield Alert'
+            text: |
+              {{ range .Alerts }}
+              *Alert:* {{ .Annotations.summary }}
+              *Description:* {{ .Annotations.description }}
+              *Service:* {{ .Labels.job }}
+              *Severity:* {{ .Labels.severity }}
+              {{ end }}
+        pagerduty_configs:
+          - routing_key: '${PAGERDUTY_INTEGRATION_KEY}'
+            description: '{{ .GroupLabels.alertname }}: {{ .CommonAnnotations.summary }}'
+            
+      - name: 'security-team'
+        email_configs:
+          - to: 'security-team@company.com'
+            subject: '[SECURITY] AegisShield Security Alert: {{ .GroupLabels.alertname }}'
+            body: |
+              🔒 SECURITY ALERT 🔒
+              
+              {{ range .Alerts }}
+              Alert: {{ .Annotations.summary }}
+              Description: {{ .Annotations.description }}
+              Time: {{ .StartsAt.Format "2006-01-02 15:04:05" }}
+              
+              Potential security incident detected. Please investigate immediately.
+              {{ end }}
+        slack_configs:
+          - api_url: '${SLACK_WEBHOOK_URL}'
+            channel: '#security-alerts'
+            title: '🔒 Security Alert'
+            text: |
+              {{ range .Alerts }}
+              *Alert:* {{ .Annotations.summary }}
+              *Description:* {{ .Annotations.description }}
+              *Time:* {{ .StartsAt.Format "2006-01-02 15:04:05" }}
+              {{ end }}
+              
+      - name: 'compliance-team'
+        email_configs:
+          - to: 'compliance-team@company.com'
+            subject: '[COMPLIANCE] AegisShield Compliance Alert: {{ .GroupLabels.alertname }}'
+            body: |
+              📋 COMPLIANCE ALERT 📋
+              
+              {{ range .Alerts }}
+              Alert: {{ .Annotations.summary }}
+              Description: {{ .Annotations.description }}
+              Time: {{ .StartsAt.Format "2006-01-02 15:04:05" }}
+              
+              Regulatory compliance issue detected. Please review.
+              {{ end }}
+              
+      - name: 'business-hours-alerts'
+        email_configs:
+          - to: 'platform-team@company.com'
+            subject: '[AegisShield] {{ .GroupLabels.alertname }} (Business Hours)'
+            body: |
+              {{ range .Alerts }}
+              Alert: {{ .Annotations.summary }}
+              Description: {{ .Annotations.description }}
+              Severity: {{ .Labels.severity }}
+              Service: {{ .Labels.job }}
+              Time: {{ .StartsAt.Format "2006-01-02 15:04:05" }}
+              {{ end }}
+              
+      - name: 'infrastructure-team'
+        email_configs:
+          - to: 'infrastructure-team@company.com'
+            subject: '[INFRA] AegisShield Infrastructure Alert: {{ .GroupLabels.alertname }}'
+            body: |
+              🏗️ INFRASTRUCTURE ALERT 🏗️
+              
+              {{ range .Alerts }}
+              Alert: {{ .Annotations.summary }}
+              Description: {{ .Annotations.description }}
+              Instance: {{ .Labels.instance }}
+              Time: {{ .StartsAt.Format "2006-01-02 15:04:05" }}
+              {{ end }}
+        slack_configs:
+          - api_url: '${SLACK_WEBHOOK_URL}'
+            channel: '#infrastructure'
+            title: '🏗️ Infrastructure Alert'
+            text: |
+              {{ range .Alerts }}
+              *Alert:* {{ .Annotations.summary }}
+              *Instance:* {{ .Labels.instance }}
+              *Description:* {{ .Annotations.description }}
+              {{ end }}

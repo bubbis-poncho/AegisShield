@@ -1,0 +1,20 @@
+-- Drop notifications table
+DROP TRIGGER IF EXISTS update_notifications_updated_at ON notifications;
+DROP INDEX IF EXISTS idx_notifications_metadata;
+DROP INDEX IF EXISTS idx_notifications_response_data;
+DROP INDEX IF EXISTS idx_notifications_channel_data;
+DROP INDEX IF EXISTS idx_notifications_alert_channel;
+DROP INDEX IF EXISTS idx_notifications_retry_status;
+DROP INDEX IF EXISTS idx_notifications_channel_status;
+DROP INDEX IF EXISTS idx_notifications_status_created;
+DROP INDEX IF EXISTS idx_notifications_external_id;
+DROP INDEX IF EXISTS idx_notifications_next_retry_at;
+DROP INDEX IF EXISTS idx_notifications_sent_at;
+DROP INDEX IF EXISTS idx_notifications_created_at;
+DROP INDEX IF EXISTS idx_notifications_recipient;
+DROP INDEX IF EXISTS idx_notifications_priority;
+DROP INDEX IF EXISTS idx_notifications_status;
+DROP INDEX IF EXISTS idx_notifications_type;
+DROP INDEX IF EXISTS idx_notifications_channel;
+DROP INDEX IF EXISTS idx_notifications_alert_id;
+DROP TABLE IF EXISTS notifications;

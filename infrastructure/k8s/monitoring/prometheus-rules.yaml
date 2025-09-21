@@ -1,0 +1,205 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-rules
+  namespace: monitoring
+data:
+  aegisshield-alerts.yml: |
+    groups:
+      - name: aegisshield.rules
+        rules:
+          # Service Health Alerts
+          - alert: ServiceDown
+            expr: up == 0
+            for: 1m
+            labels:
+              severity: critical
+            annotations:
+              summary: "Service {{ $labels.job }} is down"
+              description: "{{ $labels.job }} has been down for more than 1 minute."
+              
+          - alert: HighErrorRate
+            expr: (rate(http_requests_total{status=~"5.."}[5m]) / rate(http_requests_total[5m])) > 0.1
+            for: 5m
+            labels:
+              severity: warning
+            annotations:
+              summary: "High error rate on {{ $labels.job }}"
+              description: "Error rate is {{ $value | humanizePercentage }} for {{ $labels.job }}."
+              
+          - alert: HighResponseTime
+            expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 2
+            for: 5m
+            labels:
+              severity: warning
+            annotations:
+              summary: "High response time on {{ $labels.job }}"
+              description: "95th percentile response time is {{ $value }}s for {{ $labels.job }}."
+              
+          # AegisShield Specific Alerts
+          - alert: DataIngestionBacklog
+            expr: aegisshield_data_ingestion_queue_size > 10000
+            for: 2m
+            labels:
+              severity: warning
+            annotations:
+              summary: "Data ingestion queue backup"
+              description: "Data ingestion queue has {{ $value }} pending items."
+              
+          - alert: EntityResolutionFailureRate
+            expr: (rate(aegisshield_entity_resolution_failures[5m]) / rate(aegisshield_entity_resolution_total[5m])) > 0.05
+            for: 3m
+            labels:
+              severity: warning
+            annotations:
+              summary: "High entity resolution failure rate"
+              description: "Entity resolution failure rate is {{ $value | humanizePercentage }}."
+              
+          - alert: HighValueTransactionAlert
+            expr: increase(aegisshield_high_value_transactions_total[1m]) > 10
+            for: 0s
+            labels:
+              severity: info
+            annotations:
+              summary: "High volume of high-value transactions"
+              description: "{{ $value }} high-value transactions detected in the last minute."
+              
+          - alert: SanctionsScreeningBacklog
+            expr: aegisshield_sanctions_screening_queue_size > 1000
+            for: 1m
+            labels:
+              severity: critical
+            annotations:
+              summary: "Sanctions screening queue backup"
+              description: "Sanctions screening has {{ $value }} pending items - regulatory compliance at risk."
+              
+          - alert: InvestigationSLABreach
+            expr: aegisshield_investigation_overdue_count > 0
+            for: 0s
+            labels:
+              severity: warning
+            annotations:
+              summary: "Investigations past SLA deadline"
+              description: "{{ $value }} investigations are past their SLA deadline."
+              
+          # Infrastructure Alerts
+          - alert: HighCPUUsage
+            expr: (100 - (avg by (instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100)) > 80
+            for: 5m
+            labels:
+              severity: warning
+            annotations:
+              summary: "High CPU usage on {{ $labels.instance }}"
+              description: "CPU usage is {{ $value | humanizePercentage }} on {{ $labels.instance }}."
+              
+          - alert: HighMemoryUsage
+            expr: (node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes > 0.9
+            for: 5m
+            labels:
+              severity: warning
+            annotations:
+              summary: "High memory usage on {{ $labels.instance }}"
+              description: "Memory usage is {{ $value | humanizePercentage }} on {{ $labels.instance }}."
+              
+          - alert: DiskSpaceLow
+            expr: (node_filesystem_avail_bytes / node_filesystem_size_bytes) < 0.1
+            for: 1m
+            labels:
+              severity: critical
+            annotations:
+              summary: "Low disk space on {{ $labels.instance }}"
+              description: "Disk space is {{ $value | humanizePercentage }} full on {{ $labels.instance }} ({{ $labels.mountpoint }})."
+              
+          # Database Alerts
+          - alert: PostgreSQLDown
+            expr: pg_up == 0
+            for: 1m
+            labels:
+              severity: critical
+            annotations:
+              summary: "PostgreSQL is down"
+              description: "PostgreSQL database is not responding."
+              
+          - alert: PostgreSQLHighConnections
+            expr: pg_stat_database_numbackends / pg_settings_max_connections > 0.8
+            for: 5m
+            labels:
+              severity: warning
+            annotations:
+              summary: "PostgreSQL high connection usage"
+              description: "PostgreSQL is using {{ $value | humanizePercentage }} of max connections."
+              
+          - alert: Neo4jDown
+            expr: neo4j_database_system_available == 0
+            for: 1m
+            labels:
+              severity: critical
+            annotations:
+              summary: "Neo4j is down"
+              description: "Neo4j graph database is not available."
+              
+          - alert: Neo4jHighHeapUsage
+            expr: (neo4j_vm_heap_used / neo4j_vm_heap_max) > 0.9
+            for: 5m
+            labels:
+              severity: warning
+            annotations:
+              summary: "Neo4j high heap usage"
+              description: "Neo4j heap usage is {{ $value | humanizePercentage }}."
+              
+          # Kafka Alerts
+          - alert: KafkaConsumerLag
+            expr: kafka_consumer_lag_sum > 10000
+            for: 2m
+            labels:
+              severity: warning
+            annotations:
+              summary: "Kafka consumer lag high"
+              description: "Kafka consumer lag is {{ $value }} messages."
+              
+          - alert: KafkaBrokerDown
+            expr: kafka_brokers < 3
+            for: 1m
+            labels:
+              severity: critical
+            annotations:
+              summary: "Kafka broker down"
+              description: "Only {{ $value }} Kafka brokers are available (expected 3)."
+              
+          # Security Alerts
+          - alert: UnauthorizedAccessAttempts
+            expr: increase(aegisshield_unauthorized_access_attempts[5m]) > 10
+            for: 0s
+            labels:
+              severity: warning
+            annotations:
+              summary: "High number of unauthorized access attempts"
+              description: "{{ $value }} unauthorized access attempts in the last 5 minutes."
+              
+          - alert: SuspiciousActivityDetected
+            expr: increase(aegisshield_suspicious_activity_alerts[1m]) > 5
+            for: 0s
+            labels:
+              severity: info
+            annotations:
+              summary: "Suspicious activity spike"
+              description: "{{ $value }} suspicious activity alerts in the last minute."
+              
+          # Compliance Alerts
+          - alert: ComplianceReportingDelay
+            expr: (time() - aegisshield_last_compliance_report_timestamp) > 86400
+            for: 0s
+            labels:
+              severity: warning
+            annotations:
+              summary: "Compliance reporting delayed"
+              description: "Last compliance report was generated {{ $value | humanizeDuration }} ago."
+              
+          - alert: DataRetentionPolicyViolation
+            expr: aegisshield_data_retention_violations > 0
+            for: 0s
+            labels:
+              severity: critical
+            annotations:
+              summary: "Data retention policy violation"
+              description: "{{ $value }} data retention policy violations detected."

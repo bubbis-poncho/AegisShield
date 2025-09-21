@@ -1,0 +1,446 @@
+# AegisShield Production Kubernetes Configuration
+# This file contains production-ready Kubernetes configurations with security hardening
+# Version: 1.0.0
+# Created: $(date)
+
+---
+# Production Namespace with Enhanced Security
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: aegisshield-production
+  labels:
+    environment: production
+    security.level: high
+    compliance.required: "true"
+  annotations:
+    description: "AegisShield Production Environment"
+    contact: "ops-team@aegisshield.com"
+    compliance.frameworks: "SOX,PCI-DSS,GDPR"
+
+---
+# Network Policies for Production Security
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: production-network-policy
+  namespace: aegisshield-production
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: aegisshield-production
+    - namespaceSelector:
+        matchLabels:
+          name: monitoring
+    - namespaceSelector:
+        matchLabels:
+          name: ingress-nginx
+  egress:
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: aegisshield-production
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: kube-system
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 53
+    - protocol: UDP
+      port: 53
+    - protocol: TCP
+      port: 443
+    - protocol: TCP
+      port: 80
+
+---
+# API Gateway Network Policy
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: api-gateway-network-policy
+  namespace: aegisshield-production
+spec:
+  podSelector:
+    matchLabels:
+      app: api-gateway
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: ingress-nginx
+    ports:
+    - protocol: TCP
+      port: 8080
+  egress:
+  - to:
+    - podSelector:
+        matchLabels:
+          tier: backend
+    ports:
+    - protocol: TCP
+      port: 8080
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 443
+    - protocol: TCP
+      port: 53
+    - protocol: UDP
+      port: 53
+
+---
+# Database Network Policy
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: database-network-policy
+  namespace: aegisshield-production
+spec:
+  podSelector:
+    matchLabels:
+      tier: database
+  policyTypes:
+  - Ingress
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          tier: backend
+    ports:
+    - protocol: TCP
+      port: 5432
+    - protocol: TCP
+      port: 7687
+
+---
+# Production RBAC Configuration
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  namespace: aegisshield-production
+  name: aegisshield-production-role
+rules:
+- apiGroups: [""]
+  resources: ["pods", "services", "configmaps", "secrets"]
+  verbs: ["get", "list", "watch", "create", "update", "patch"]
+- apiGroups: ["apps"]
+  resources: ["deployments", "replicasets"]
+  verbs: ["get", "list", "watch", "create", "update", "patch"]
+- apiGroups: ["extensions"]
+  resources: ["ingresses"]
+  verbs: ["get", "list", "watch"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: aegisshield-production-binding
+  namespace: aegisshield-production
+subjects:
+- kind: ServiceAccount
+  name: aegisshield-production-sa
+  namespace: aegisshield-production
+roleRef:
+  kind: Role
+  name: aegisshield-production-role
+  apiGroup: rbac.authorization.k8s.io
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: aegisshield-production-sa
+  namespace: aegisshield-production
+  labels:
+    environment: production
+automountServiceAccountToken: false
+
+---
+# Production Resource Quotas
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: production-resource-quota
+  namespace: aegisshield-production
+spec:
+  hard:
+    requests.cpu: "20"
+    requests.memory: 40Gi
+    limits.cpu: "40"
+    limits.memory: 80Gi
+    pods: "50"
+    services: "20"
+    secrets: "30"
+    configmaps: "30"
+    persistentvolumeclaims: "10"
+    requests.storage: "1Ti"
+
+---
+# Limit Ranges for Production
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: production-limit-range
+  namespace: aegisshield-production
+spec:
+  limits:
+  - type: Container
+    default:
+      cpu: "500m"
+      memory: "1Gi"
+    defaultRequest:
+      cpu: "100m"
+      memory: "128Mi"
+    min:
+      cpu: "50m"
+      memory: "64Mi"
+    max:
+      cpu: "2"
+      memory: "4Gi"
+  - type: Pod
+    max:
+      cpu: "4"
+      memory: "8Gi"
+
+---
+# Pod Security Policy for Production
+apiVersion: policy/v1beta1
+kind: PodSecurityPolicy
+metadata:
+  name: aegisshield-production-psp
+spec:
+  privileged: false
+  allowPrivilegeEscalation: false
+  requiredDropCapabilities:
+    - ALL
+  volumes:
+    - 'configMap'
+    - 'emptyDir'
+    - 'projected'
+    - 'secret'
+    - 'downwardAPI'
+    - 'persistentVolumeClaim'
+  runAsUser:
+    rule: 'MustRunAsNonRoot'
+  runAsGroup:
+    rule: 'MustRunAs'
+    ranges:
+      - min: 1000
+        max: 65535
+  seLinux:
+    rule: 'RunAsAny'
+  fsGroup:
+    rule: 'MustRunAs'
+    ranges:
+      - min: 1000
+        max: 65535
+  readOnlyRootFilesystem: true
+  seccompProfile:
+    type: RuntimeDefault
+
+---
+# Production Priority Classes
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: aegisshield-critical
+value: 1000
+globalDefault: false
+description: "Critical AegisShield services"
+
+---
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: aegisshield-high
+value: 800
+globalDefault: false
+description: "High priority AegisShield services"
+
+---
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: aegisshield-normal
+value: 500
+globalDefault: true
+description: "Normal priority AegisShield services"
+
+---
+# Production Monitoring ServiceMonitor
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: aegisshield-production-monitor
+  namespace: aegisshield-production
+  labels:
+    app: aegisshield
+    environment: production
+spec:
+  selector:
+    matchLabels:
+      monitoring: enabled
+  endpoints:
+  - port: metrics
+    interval: 30s
+    path: /metrics
+    scrapeTimeout: 10s
+
+---
+# Production Pod Disruption Budget for API Gateway
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: api-gateway-pdb
+  namespace: aegisshield-production
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: api-gateway
+
+---
+# Production Pod Disruption Budget for Data Ingestion
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: data-ingestion-pdb
+  namespace: aegisshield-production
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: data-ingestion
+
+---
+# Production Pod Disruption Budget for Graph Engine
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: graph-engine-pdb
+  namespace: aegisshield-production
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: graph-engine
+
+---
+# Horizontal Pod Autoscaler for API Gateway
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: api-gateway-hpa
+  namespace: aegisshield-production
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: api-gateway
+  minReplicas: 3
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+      - type: Percent
+        value: 50
+        periodSeconds: 60
+    scaleUp:
+      stabilizationWindowSeconds: 60
+      policies:
+      - type: Percent
+        value: 100
+        periodSeconds: 60
+
+---
+# Horizontal Pod Autoscaler for Data Ingestion
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: data-ingestion-hpa
+  namespace: aegisshield-production
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: data-ingestion
+  minReplicas: 2
+  maxReplicas: 8
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 75
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 85
+
+---
+# Production ConfigMap for Environment Variables
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: production-config
+  namespace: aegisshield-production
+data:
+  ENVIRONMENT: "production"
+  LOG_LEVEL: "INFO"
+  METRICS_ENABLED: "true"
+  TRACING_ENABLED: "true"
+  SECURITY_LEVEL: "high"
+  COMPLIANCE_MODE: "strict"
+  RATE_LIMIT_ENABLED: "true"
+  CACHE_TTL: "300"
+  MAX_CONNECTIONS: "100"
+  CONNECTION_TIMEOUT: "30s"
+  READ_TIMEOUT: "60s"
+  WRITE_TIMEOUT: "60s"
+  GRACEFUL_SHUTDOWN_TIMEOUT: "30s"
+
+---
+# Production Secret Template (values to be updated during deployment)
+apiVersion: v1
+kind: Secret
+metadata:
+  name: production-secrets
+  namespace: aegisshield-production
+type: Opaque
+data:
+  # Base64 encoded secrets - UPDATE THESE VALUES IN PRODUCTION
+  database-url: ""
+  neo4j-url: ""
+  vault-token: ""
+  jwt-secret: ""
+  encryption-key: ""
+  api-key: ""

@@ -1,0 +1,587 @@
+syntax = "proto3";
+
+package aegisshield.api_gateway;
+
+option go_package = "aegisshield/shared/proto/api-gateway";
+
+import "google/protobuf/timestamp.proto";
+import "shared/proto/shared.proto";
+
+// API Gateway Service - T023
+// Constitutional Principle: API Design Excellence & Comprehensive Integration
+
+service ApiGatewayService {
+  // GraphQL Integration
+  rpc ExecuteGraphQLQuery(GraphQLQueryRequest) returns (GraphQLQueryResponse);
+  rpc ExecuteGraphQLMutation(GraphQLMutationRequest) returns (GraphQLMutationResponse);
+  rpc ExecuteGraphQLSubscription(GraphQLSubscriptionRequest) returns (stream GraphQLSubscriptionResponse);
+  
+  // Authentication & Authorization
+  rpc Authenticate(AuthenticationRequest) returns (AuthenticationResponse);
+  rpc Authorize(AuthorizationRequest) returns (AuthorizationResponse);
+  rpc RefreshToken(RefreshTokenRequest) returns (RefreshTokenResponse);
+  rpc ValidateToken(ValidateTokenRequest) returns (ValidateTokenResponse);
+  rpc Logout(LogoutRequest) returns (LogoutResponse);
+  
+  // Request Routing
+  rpc RouteRequest(RouteRequest) returns (RouteResponse);
+  rpc GetServiceEndpoints(GetServiceEndpointsRequest) returns (GetServiceEndpointsResponse);
+  
+  // Rate Limiting & Throttling
+  rpc CheckRateLimit(RateLimitRequest) returns (RateLimitResponse);
+  rpc UpdateRateLimit(UpdateRateLimitRequest) returns (UpdateRateLimitResponse);
+  
+  // Request/Response Transformation
+  rpc TransformRequest(TransformRequest) returns (TransformResponse);
+  rpc TransformResponse(TransformResponseRequest) returns (TransformResponseResponse);
+  
+  // Caching
+  rpc GetCachedResponse(CacheRequest) returns (CacheResponse);
+  rpc SetCachedResponse(SetCacheRequest) returns (SetCacheResponse);
+  rpc InvalidateCache(InvalidateCacheRequest) returns (InvalidateCacheResponse);
+  
+  // Monitoring & Analytics
+  rpc LogRequest(LogRequestRequest) returns (LogRequestResponse);
+  rpc GetApiMetrics(GetApiMetricsRequest) returns (GetApiMetricsResponse);
+  rpc GetUsageStatistics(GetUsageStatisticsRequest) returns (GetUsageStatisticsResponse);
+  
+  // Health Check
+  rpc HealthCheck(HealthCheckRequest) returns (HealthCheckResponse);
+}
+
+// GraphQL Messages
+message GraphQLQueryRequest {
+  string query = 1;
+  map<string, GraphQLVariable> variables = 2;
+  string operation_name = 3;
+  RequestContext context = 4;
+  QueryOptions options = 5;
+}
+
+message GraphQLVariable {
+  VariableType type = 1;
+  string string_value = 2;
+  int64 int_value = 3;
+  double float_value = 4;
+  bool boolean_value = 5;
+  repeated GraphQLVariable array_value = 6;
+  map<string, GraphQLVariable> object_value = 7;
+}
+
+enum VariableType {
+  VARIABLE_TYPE_UNSPECIFIED = 0;
+  STRING = 1;
+  INT = 2;
+  FLOAT = 3;
+  BOOLEAN = 4;
+  ID = 5;
+  ARRAY = 6;
+  OBJECT = 7;
+  ENUM = 8;
+}
+
+message RequestContext {
+  string user_id = 1;
+  repeated string roles = 2;
+  repeated string permissions = 3;
+  string tenant_id = 4;
+  map<string, string> headers = 5;
+  string ip_address = 6;
+  string user_agent = 7;
+  string request_id = 8;
+  google.protobuf.Timestamp timestamp = 9;
+}
+
+message QueryOptions {
+  int32 timeout_seconds = 1;
+  bool enable_caching = 2;
+  int32 cache_ttl_seconds = 3;
+  bool enable_tracing = 4;
+  bool enable_metrics = 5;
+  int32 complexity_limit = 6;
+  int32 depth_limit = 7;
+}
+
+message GraphQLQueryResponse {
+  string data = 1;
+  repeated GraphQLError errors = 2;
+  map<string, string> extensions = 3;
+  ExecutionMetrics metrics = 4;
+  bool from_cache = 5;
+}
+
+message GraphQLError {
+  string message = 1;
+  repeated ErrorLocation locations = 2;
+  repeated string path = 3;
+  map<string, string> extensions = 4;
+  ErrorSeverity severity = 5;
+}
+
+message ErrorLocation {
+  int32 line = 1;
+  int32 column = 2;
+}
+
+enum ErrorSeverity {
+  ERROR_SEVERITY_UNSPECIFIED = 0;
+  INFO = 1;
+  WARNING = 2;
+  ERROR = 3;
+  CRITICAL = 4;
+}
+
+message ExecutionMetrics {
+  double execution_time_ms = 1;
+  int32 resolver_count = 2;
+  double parsing_time_ms = 3;
+  double validation_time_ms = 4;
+  int32 complexity_score = 5;
+  int32 depth_score = 6;
+  map<string, double> resolver_timings = 7;
+}
+
+message GraphQLMutationRequest {
+  string mutation = 1;
+  map<string, GraphQLVariable> variables = 2;
+  string operation_name = 3;
+  RequestContext context = 4;
+  MutationOptions options = 5;
+}
+
+message MutationOptions {
+  int32 timeout_seconds = 1;
+  bool enable_transaction = 2;
+  bool enable_tracing = 3;
+  bool enable_metrics = 4;
+  bool async_execution = 5;
+}
+
+message GraphQLMutationResponse {
+  string data = 1;
+  repeated GraphQLError errors = 2;
+  map<string, string> extensions = 3;
+  ExecutionMetrics metrics = 4;
+  string transaction_id = 5;
+}
+
+message GraphQLSubscriptionRequest {
+  string subscription = 1;
+  map<string, GraphQLVariable> variables = 2;
+  string operation_name = 3;
+  RequestContext context = 4;
+  SubscriptionOptions options = 5;
+}
+
+message SubscriptionOptions {
+  int32 timeout_seconds = 1;
+  bool enable_tracing = 2;
+  bool enable_metrics = 3;
+  int32 buffer_size = 4;
+  string filter_expression = 5;
+}
+
+message GraphQLSubscriptionResponse {
+  string data = 1;
+  repeated GraphQLError errors = 2;
+  map<string, string> extensions = 3;
+  SubscriptionEvent event = 4;
+  bool is_final = 5;
+}
+
+message SubscriptionEvent {
+  EventType event_type = 1;
+  string event_id = 2;
+  google.protobuf.Timestamp timestamp = 3;
+  map<string, string> metadata = 4;
+}
+
+enum EventType {
+  EVENT_TYPE_UNSPECIFIED = 0;
+  DATA_UPDATE = 1;
+  CONNECTION_INIT = 2;
+  CONNECTION_ACK = 3;
+  CONNECTION_ERROR = 4;
+  CONNECTION_TERMINATE = 5;
+  SUBSCRIPTION_START = 6;
+  SUBSCRIPTION_DATA = 7;
+  SUBSCRIPTION_ERROR = 8;
+  SUBSCRIPTION_COMPLETE = 9;
+}
+
+// Authentication & Authorization Messages
+message AuthenticationRequest {
+  AuthenticationMethod method = 1;
+  Credentials credentials = 2;
+  string client_id = 3;
+  map<string, string> metadata = 4;
+}
+
+enum AuthenticationMethod {
+  AUTHENTICATION_METHOD_UNSPECIFIED = 0;
+  USERNAME_PASSWORD = 1;
+  API_KEY = 2;
+  JWT_TOKEN = 3;
+  OAUTH2 = 4;
+  SAML = 5;
+  LDAP = 6;
+  MULTI_FACTOR = 7;
+}
+
+message Credentials {
+  string username = 1;
+  string password = 2;
+  string api_key = 3;
+  string token = 4;
+  string oauth_code = 5;
+  string saml_assertion = 6;
+  repeated MfaFactor mfa_factors = 7;
+}
+
+message MfaFactor {
+  MfaType type = 1;
+  string value = 2;
+  string challenge = 3;
+}
+
+enum MfaType {
+  MFA_TYPE_UNSPECIFIED = 0;
+  TOTP = 1;
+  SMS = 2;
+  EMAIL = 3;
+  HARDWARE_TOKEN = 4;
+  BIOMETRIC = 5;
+}
+
+message AuthenticationResponse {
+  bool success = 1;
+  string access_token = 2;
+  string refresh_token = 3;
+  int64 expires_in = 4;
+  string token_type = 5;
+  UserInfo user_info = 6;
+  repeated string permissions = 7;
+  map<string, string> claims = 8;
+}
+
+message UserInfo {
+  string user_id = 1;
+  string username = 2;
+  string email = 3;
+  string full_name = 4;
+  repeated string roles = 5;
+  repeated string groups = 6;
+  map<string, string> attributes = 7;
+  google.protobuf.Timestamp last_login = 8;
+}
+
+message AuthorizationRequest {
+  string user_id = 1;
+  string resource = 2;
+  string action = 3;
+  RequestContext context = 4;
+  map<string, string> resource_attributes = 5;
+}
+
+message AuthorizationResponse {
+  bool authorized = 1;
+  string decision = 2;
+  repeated string reasons = 3;
+  map<string, string> obligations = 4;
+  PolicyEvaluation policy_evaluation = 5;
+}
+
+message PolicyEvaluation {
+  repeated PolicyResult policies = 1;
+  double evaluation_time_ms = 2;
+  string decision_tree = 3;
+}
+
+message PolicyResult {
+  string policy_id = 1;
+  string policy_name = 2;
+  PolicyDecision decision = 3;
+  double confidence = 4;
+  string reason = 5;
+}
+
+enum PolicyDecision {
+  POLICY_DECISION_UNSPECIFIED = 0;
+  ALLOW = 1;
+  DENY = 2;
+  NOT_APPLICABLE = 3;
+  INDETERMINATE = 4;
+}
+
+// Request Routing Messages
+message RouteRequest {
+  string service_name = 1;
+  string method = 2;
+  string path = 3;
+  map<string, string> headers = 4;
+  string body = 5;
+  RequestContext context = 6;
+  RoutingOptions options = 7;
+}
+
+message RoutingOptions {
+  LoadBalancingStrategy load_balancing = 1;
+  bool enable_circuit_breaker = 2;
+  int32 timeout_seconds = 3;
+  int32 retry_attempts = 4;
+  string service_version = 5;
+  bool enable_tracing = 6;
+}
+
+enum LoadBalancingStrategy {
+  LOAD_BALANCING_STRATEGY_UNSPECIFIED = 0;
+  ROUND_ROBIN = 1;
+  WEIGHTED_ROUND_ROBIN = 2;
+  LEAST_CONNECTIONS = 3;
+  WEIGHTED_LEAST_CONNECTIONS = 4;
+  RANDOM = 5;
+  HASH = 6;
+  STICKY_SESSION = 7;
+}
+
+message RouteResponse {
+  int32 status_code = 1;
+  map<string, string> headers = 2;
+  string body = 3;
+  ServiceEndpoint endpoint = 4;
+  RoutingMetrics metrics = 5;
+  repeated shared.Error errors = 6;
+}
+
+message ServiceEndpoint {
+  string service_name = 1;
+  string host = 2;
+  int32 port = 3;
+  string protocol = 4;
+  string version = 5;
+  HealthStatus health_status = 6;
+  double weight = 7;
+}
+
+message RoutingMetrics {
+  double response_time_ms = 1;
+  int32 retry_count = 2;
+  bool circuit_breaker_open = 3;
+  string selected_endpoint = 4;
+  LoadBalancingStrategy strategy_used = 5;
+}
+
+// Rate Limiting Messages
+message RateLimitRequest {
+  string identifier = 1;
+  RateLimitScope scope = 2;
+  RequestContext context = 3;
+  int32 tokens_requested = 4;
+}
+
+enum RateLimitScope {
+  RATE_LIMIT_SCOPE_UNSPECIFIED = 0;
+  USER = 1;
+  IP_ADDRESS = 2;
+  API_KEY = 3;
+  TENANT = 4;
+  GLOBAL = 5;
+  CUSTOM = 6;
+}
+
+message RateLimitResponse {
+  bool allowed = 1;
+  int32 remaining_tokens = 2;
+  google.protobuf.Timestamp reset_time = 3;
+  int32 retry_after_seconds = 4;
+  RateLimitInfo limit_info = 5;
+}
+
+message RateLimitInfo {
+  int32 limit = 1;
+  string window = 2;
+  RateLimitAlgorithm algorithm = 3;
+  map<string, string> metadata = 4;
+}
+
+enum RateLimitAlgorithm {
+  RATE_LIMIT_ALGORITHM_UNSPECIFIED = 0;
+  TOKEN_BUCKET = 1;
+  LEAKY_BUCKET = 2;
+  FIXED_WINDOW = 3;
+  SLIDING_WINDOW = 4;
+  SLIDING_WINDOW_LOG = 5;
+}
+
+// Caching Messages
+message CacheRequest {
+  string key = 1;
+  CacheScope scope = 2;
+  map<string, string> tags = 3;
+}
+
+enum CacheScope {
+  CACHE_SCOPE_UNSPECIFIED = 0;
+  GLOBAL = 1;
+  USER = 2;
+  TENANT = 3;
+  QUERY = 4;
+  RESPONSE = 5;
+}
+
+message CacheResponse {
+  bool found = 1;
+  string value = 2;
+  google.protobuf.Timestamp expires_at = 3;
+  map<string, string> metadata = 4;
+  CacheMetrics metrics = 5;
+}
+
+message CacheMetrics {
+  double retrieval_time_ms = 1;
+  int64 size_bytes = 2;
+  int32 hit_count = 3;
+  google.protobuf.Timestamp last_accessed = 4;
+}
+
+message SetCacheRequest {
+  string key = 1;
+  string value = 2;
+  int32 ttl_seconds = 3;
+  CacheScope scope = 4;
+  repeated string tags = 5;
+  map<string, string> metadata = 6;
+}
+
+message SetCacheResponse {
+  bool success = 1;
+  string message = 2;
+  google.protobuf.Timestamp expires_at = 3;
+}
+
+// API Metrics Messages
+message GetApiMetricsRequest {
+  shared.TimeRange time_range = 1;
+  MetricsScope scope = 2;
+  repeated string service_names = 3;
+  MetricsGranularity granularity = 4;
+}
+
+enum MetricsScope {
+  METRICS_SCOPE_UNSPECIFIED = 0;
+  ALL_SERVICES = 1;
+  SPECIFIC_SERVICES = 2;
+  USER_SPECIFIC = 3;
+  TENANT_SPECIFIC = 4;
+}
+
+enum MetricsGranularity {
+  METRICS_GRANULARITY_UNSPECIFIED = 0;
+  MINUTE = 1;
+  HOUR = 2;
+  DAY = 3;
+  WEEK = 4;
+  MONTH = 5;
+}
+
+message GetApiMetricsResponse {
+  repeated ApiMetric metrics = 1;
+  MetricsSummary summary = 2;
+  google.protobuf.Timestamp generated_at = 3;
+}
+
+message ApiMetric {
+  string service_name = 1;
+  string endpoint = 2;
+  int64 request_count = 3;
+  double average_response_time_ms = 4;
+  double p95_response_time_ms = 5;
+  double p99_response_time_ms = 6;
+  int64 error_count = 7;
+  double error_rate = 8;
+  int64 cache_hits = 9;
+  int64 cache_misses = 10;
+  google.protobuf.Timestamp timestamp = 11;
+}
+
+message MetricsSummary {
+  int64 total_requests = 1;
+  double overall_error_rate = 2;
+  double average_response_time = 3;
+  int64 unique_users = 4;
+  repeated TopEndpoint top_endpoints = 5;
+  repeated ErrorBreakdown error_breakdown = 6;
+}
+
+message TopEndpoint {
+  string endpoint = 1;
+  int64 request_count = 2;
+  double percentage = 3;
+}
+
+message ErrorBreakdown {
+  int32 status_code = 1;
+  int64 count = 2;
+  double percentage = 3;
+}
+
+// Transform Messages
+message TransformRequest {
+  string input_data = 1;
+  TransformationType transformation_type = 2;
+  map<string, string> transformation_rules = 3;
+  string schema_version = 4;
+}
+
+enum TransformationType {
+  TRANSFORMATION_TYPE_UNSPECIFIED = 0;
+  JSON_TO_PROTOBUF = 1;
+  PROTOBUF_TO_JSON = 2;
+  XML_TO_JSON = 3;
+  JSON_TO_XML = 4;
+  FIELD_MAPPING = 5;
+  DATA_FORMAT_CONVERSION = 6;
+  CUSTOM_TRANSFORMATION = 7;
+}
+
+message TransformResponse {
+  string output_data = 1;
+  bool success = 2;
+  repeated shared.Error errors = 3;
+  TransformationMetrics metrics = 4;
+}
+
+message TransformationMetrics {
+  double transformation_time_ms = 1;
+  int64 input_size_bytes = 2;
+  int64 output_size_bytes = 3;
+  int32 fields_transformed = 4;
+}
+
+// Health Check Messages
+message HealthCheckRequest {
+  string service = 1;
+  bool include_dependencies = 2;
+}
+
+message HealthCheckResponse {
+  HealthStatus status = 1;
+  string message = 2;
+  map<string, string> details = 3;
+  repeated ServiceHealth dependencies = 4;
+  google.protobuf.Timestamp timestamp = 5;
+}
+
+enum HealthStatus {
+  HEALTH_STATUS_UNSPECIFIED = 0;
+  HEALTHY = 1;
+  DEGRADED = 2;
+  UNHEALTHY = 3;
+}
+
+message ServiceHealth {
+  string service_name = 1;
+  HealthStatus status = 2;
+  string message = 3;
+  double response_time_ms = 4;
+}

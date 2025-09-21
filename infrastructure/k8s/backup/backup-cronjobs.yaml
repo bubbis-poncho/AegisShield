@@ -1,0 +1,354 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: backup-schedule-config
+  namespace: aegisshield
+data:
+  backup-schedule.yaml: |
+    # AegisShield Backup Schedule Configuration
+    schedules:
+      # Full backup - Daily at 2 AM UTC
+      full_backup:
+        cron: "0 2 * * *"
+        type: "full"
+        retention_days: 30
+        services:
+          - postgresql
+          - neo4j
+          - vault
+        
+      # Incremental backup - Every 6 hours
+      incremental_backup:
+        cron: "0 */6 * * *"
+        type: "incremental"
+        retention_days: 7
+        services:
+          - postgresql
+          - vault
+        
+      # Configuration backup - Weekly on Sunday at 1 AM UTC
+      config_backup:
+        cron: "0 1 * * 0"
+        type: "configuration"
+        retention_days: 90
+        services:
+          - kubernetes_configs
+          - application_configs
+        
+      # Recovery test - Monthly on 1st at 3 AM UTC
+      recovery_test:
+        cron: "0 3 1 * *"
+        type: "recovery_test"
+        notification: "required"
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: aegisshield-full-backup
+  namespace: aegisshield
+spec:
+  schedule: "0 2 * * *"  # Daily at 2 AM UTC
+  timeZone: "UTC"
+  concurrencyPolicy: Forbid
+  failedJobsHistoryLimit: 3
+  successfulJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            app: aegisshield-backup
+            type: full
+        spec:
+          restartPolicy: OnFailure
+          serviceAccountName: backup-service-account
+          containers:
+            - name: backup
+              image: aegisshield/backup-runner:latest
+              command:
+                - /bin/bash
+                - -c
+                - |
+                  set -e
+                  echo "Starting AegisShield full backup..."
+                  /opt/scripts/backup-automation.sh
+                  echo "Full backup completed"
+              env:
+                - name: BACKUP_TYPE
+                  value: "full"
+                - name: BACKUP_BASE_DIR
+                  value: "/var/backups/aegisshield"
+                - name: S3_BUCKET
+                  value: "aegisshield-backups"
+                - name: RETENTION_DAYS
+                  value: "30"
+                - name: ENCRYPTION_KEY_FILE
+                  value: "/etc/aegisshield/backup-encryption.key"
+              volumeMounts:
+                - name: backup-storage
+                  mountPath: /var/backups/aegisshield
+                - name: backup-encryption-key
+                  mountPath: /etc/aegisshield
+                  readOnly: true
+                - name: backup-scripts
+                  mountPath: /opt/scripts
+                  readOnly: true
+                - name: aws-credentials
+                  mountPath: /root/.aws
+                  readOnly: true
+              resources:
+                requests:
+                  memory: "1Gi"
+                  cpu: "500m"
+                limits:
+                  memory: "4Gi"
+                  cpu: "2"
+          volumes:
+            - name: backup-storage
+              persistentVolumeClaim:
+                claimName: backup-storage
+            - name: backup-encryption-key
+              secret:
+                secretName: backup-encryption-key
+            - name: backup-scripts
+              configMap:
+                name: backup-scripts
+                defaultMode: 0755
+            - name: aws-credentials
+              secret:
+                secretName: aws-credentials
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: aegisshield-incremental-backup
+  namespace: aegisshield
+spec:
+  schedule: "0 */6 * * *"  # Every 6 hours
+  timeZone: "UTC"
+  concurrencyPolicy: Forbid
+  failedJobsHistoryLimit: 2
+  successfulJobsHistoryLimit: 2
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            app: aegisshield-backup
+            type: incremental
+        spec:
+          restartPolicy: OnFailure
+          serviceAccountName: backup-service-account
+          containers:
+            - name: backup
+              image: aegisshield/backup-runner:latest
+              command:
+                - /bin/bash
+                - -c
+                - |
+                  set -e
+                  echo "Starting AegisShield incremental backup..."
+                  /opt/scripts/incremental-backup.sh
+                  echo "Incremental backup completed"
+              env:
+                - name: BACKUP_TYPE
+                  value: "incremental"
+                - name: BACKUP_BASE_DIR
+                  value: "/var/backups/aegisshield"
+                - name: S3_BUCKET
+                  value: "aegisshield-backups"
+                - name: RETENTION_DAYS
+                  value: "7"
+              volumeMounts:
+                - name: backup-storage
+                  mountPath: /var/backups/aegisshield
+                - name: backup-encryption-key
+                  mountPath: /etc/aegisshield
+                  readOnly: true
+                - name: backup-scripts
+                  mountPath: /opt/scripts
+                  readOnly: true
+                - name: aws-credentials
+                  mountPath: /root/.aws
+                  readOnly: true
+              resources:
+                requests:
+                  memory: "512Mi"
+                  cpu: "250m"
+                limits:
+                  memory: "2Gi"
+                  cpu: "1"
+          volumes:
+            - name: backup-storage
+              persistentVolumeClaim:
+                claimName: backup-storage
+            - name: backup-encryption-key
+              secret:
+                secretName: backup-encryption-key
+            - name: backup-scripts
+              configMap:
+                name: backup-scripts
+                defaultMode: 0755
+            - name: aws-credentials
+              secret:
+                secretName: aws-credentials
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: aegisshield-recovery-test
+  namespace: aegisshield
+spec:
+  schedule: "0 3 1 * *"  # Monthly on 1st at 3 AM UTC
+  timeZone: "UTC"
+  concurrencyPolicy: Forbid
+  failedJobsHistoryLimit: 1
+  successfulJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            app: aegisshield-backup
+            type: recovery-test
+        spec:
+          restartPolicy: OnFailure
+          serviceAccountName: backup-service-account
+          containers:
+            - name: recovery-test
+              image: aegisshield/backup-runner:latest
+              command:
+                - /bin/bash
+                - -c
+                - |
+                  set -e
+                  echo "Starting AegisShield recovery test..."
+                  /opt/scripts/recovery-testing.sh
+                  echo "Recovery test completed"
+              env:
+                - name: TEST_TYPE
+                  value: "recovery"
+                - name: BACKUP_SOURCE
+                  value: "/var/backups/aegisshield"
+                - name: TEST_NAMESPACE
+                  value: "aegisshield-recovery-test"
+              volumeMounts:
+                - name: backup-storage
+                  mountPath: /var/backups/aegisshield
+                  readOnly: true
+                - name: backup-encryption-key
+                  mountPath: /etc/aegisshield
+                  readOnly: true
+                - name: backup-scripts
+                  mountPath: /opt/scripts
+                  readOnly: true
+              resources:
+                requests:
+                  memory: "2Gi"
+                  cpu: "1"
+                limits:
+                  memory: "8Gi"
+                  cpu: "4"
+          volumes:
+            - name: backup-storage
+              persistentVolumeClaim:
+                claimName: backup-storage
+            - name: backup-encryption-key
+              secret:
+                secretName: backup-encryption-key
+            - name: backup-scripts
+              configMap:
+                name: backup-scripts
+                defaultMode: 0755
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: backup-storage
+  namespace: aegisshield
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 500Gi
+  storageClassName: fast-ssd
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: backup-service-account
+  namespace: aegisshield
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: backup-role
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "services", "configmaps", "secrets"]
+    verbs: ["get", "list", "create", "delete"]
+  - apiGroups: [""]
+    resources: ["pods/exec"]
+    verbs: ["create"]
+  - apiGroups: ["apps"]
+    resources: ["deployments", "statefulsets"]
+    verbs: ["get", "list"]
+  - apiGroups: [""]
+    resources: ["namespaces"]
+    verbs: ["create", "delete", "get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: backup-role-binding
+subjects:
+  - kind: ServiceAccount
+    name: backup-service-account
+    namespace: aegisshield
+roleRef:
+  kind: ClusterRole
+  name: backup-role
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: backup-scripts
+  namespace: aegisshield
+data:
+  backup-automation.sh: |
+    #!/bin/bash
+    # This would contain the backup automation script content
+    # In production, this would be mounted from the actual script files
+    echo "Backup automation script placeholder"
+    echo "In production, mount actual script from /infrastructure/scripts/"
+  
+  incremental-backup.sh: |
+    #!/bin/bash
+    # Incremental backup script for PostgreSQL and Vault
+    set -e
+    
+    echo "Starting incremental backup..."
+    
+    # PostgreSQL incremental backup using WAL files
+    POSTGRES_HOST="postgresql.aegisshield.svc.cluster.local"
+    BACKUP_DIR="/var/backups/aegisshield/incremental/$(date '+%Y%m%d_%H%M%S')"
+    
+    mkdir -p "$BACKUP_DIR"
+    
+    # Copy WAL files for incremental backup
+    kubectl exec deployment/postgresql -n aegisshield -- \
+      bash -c "pg_basebackup -h $POSTGRES_HOST -U postgres -D /tmp/incremental -Ft -z"
+    
+    kubectl cp aegisshield/$(kubectl get pod -n aegisshield -l app=postgresql -o jsonpath='{.items[0].metadata.name}'):/tmp/incremental \
+      "$BACKUP_DIR/postgresql"
+    
+    echo "Incremental backup completed"
+  
+  recovery-testing.sh: |
+    #!/bin/bash
+    # This would contain the recovery testing script content
+    # In production, this would be mounted from the actual script files
+    echo "Recovery testing script placeholder"
+    echo "In production, mount actual script from /infrastructure/scripts/"
